@@ -1,41 +1,50 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 export default function RegisterPage() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: ''
+  });
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
     setMsg('');
     
     try {
-      const res = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password })
+        body: JSON.stringify(formData)
       });
-      const data = await res.json();
+      
+      const data = await response.json();
       
       if (data.success) {
-        setMsg('Success! Redirecting to login...');
+        setMsg('Account created! Redirecting...');
         setTimeout(() => {
-          router.push('/login');
-        }, 1500);
+          window.location.href = '/login';
+        }, 2000);
       } else {
         setMsg(data.error || 'Registration failed');
       }
-    } catch (error) {
-      setMsg('Network error. Please try again.');
+    } catch (err) {
+      setMsg('Connection error');
     }
+    
     setLoading(false);
+  };
+
+  const handleChange = (e: any) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
   return (
@@ -49,15 +58,16 @@ export default function RegisterPage() {
           {`> NEW USER REGISTRATION`}
         </p>
         
-        <form onSubmit={handleRegister} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-[#00f5ff] text-sm font-mono mb-2">
               {`> ALIAS (NAME)`}
             </label>
             <input 
+              name="name"
               type="text" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
+              value={formData.name}
+              onChange={handleChange}
               className="input-dark" 
               required 
             />
@@ -67,9 +77,10 @@ export default function RegisterPage() {
               {`> EMAIL_ADDRESS`}
             </label>
             <input 
+              name="email"
               type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+              value={formData.email}
+              onChange={handleChange}
               className="input-dark" 
               required 
             />
@@ -79,9 +90,10 @@ export default function RegisterPage() {
               {`> PASSWORD`}
             </label>
             <input 
+              name="password"
               type="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
+              value={formData.password}
+              onChange={handleChange}
               className="input-dark" 
               required 
             />
@@ -97,7 +109,7 @@ export default function RegisterPage() {
         
         {msg && (
           <p className={`mt-4 text-center font-mono text-sm ${
-            msg.includes('Success') ? 'text-[#00ff88]' : 'text-[#ff2a6d]'
+            msg.includes('created') ? 'text-[#00ff88]' : 'text-[#ff2a6d]'
           }`}>
             {msg}
           </p>
