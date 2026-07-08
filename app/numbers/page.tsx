@@ -23,6 +23,8 @@ export default function VirtualNumbersPage() {
   const [msgType, setMsgType] = useState('');
   const [balance, setBalance] = useState(0);
   const [orderData, setOrderData] = useState<any>(null);
+  const [error, setError] = useState('');
+  const [debugInfo, setDebugInfo] = useState('');
 
   useEffect(() => {
     fetchServices();
@@ -33,6 +35,8 @@ export default function VirtualNumbersPage() {
 
   const fetchServices = async () => {
     setLoading(true);
+    setError('');
+    setDebugInfo('');
     try {
       let endpoint = '';
       switch(selectedServer) {
@@ -49,10 +53,17 @@ export default function VirtualNumbersPage() {
       
       const res = await fetch(endpoint);
       const data = await res.json();
-      if (data.services) {
-        setServices(Array.isArray(data.services) ? data.services : [data.services]);
+      setDebugInfo(JSON.stringify(data).substring(0, 200));
+      
+      if (data.success && Array.isArray(data.services || data.data) && (data.services || data.data).length > 0) {
+        setServices(data.services || data.data);
+        setError('');
+      } else {
+        setError(data.error || 'No services available');
+        setServices([]);
       }
     } catch (error) {
+      setError('Failed to fetch services');
       console.error('Failed to fetch services:', error);
     }
     setLoading(false);
@@ -73,8 +84,8 @@ export default function VirtualNumbersPage() {
       if (endpoint) {
         const res = await fetch(endpoint);
         const data = await res.json();
-        if (data.countries) {
-          setCountries(Array.isArray(data.countries) ? data.countries : [data.countries]);
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          setCountries(data.data);
         }
       }
     } catch (error) {
@@ -134,13 +145,13 @@ export default function VirtualNumbersPage() {
 
       const data = await res.json();
       
-      if (data.success || data.order_id) {
+      if (data.success || data.parsed) {
         setMsgType('success');
-        setMsg('Number acquired successfully!');
-        setOrderData(data);
+        setMsg('Number acquired!');
+        setOrderData(data.parsed || data);
       } else {
         setMsgType('error');
-        setMsg(data.error || 'Purchase failed');
+        setMsg(data.error || data.rawResponse || 'Purchase failed');
       }
     } catch (error: any) {
       setMsgType('error');
@@ -203,6 +214,13 @@ export default function VirtualNumbersPage() {
               🌐 All Countries Server 2
             </button>
           </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-[#ff2a6d]/10 border border-[#ff2a6d]/30 rounded text-[#ff2a6d] text-sm font-mono">
+              <p className="font-bold">⚠️ {error}</p>
+              {debugInfo && <p className="mt-2 text-xs text-[#ff2a6d]/70">Debug: {debugInfo}</p>}
+            </div>
+          )}
 
           <div className="card-dark max-w-2xl">
             <h2 className="text-2xl font-bold text-[#00f5ff] mb-6">{getServerName()}</h2>
@@ -396,6 +414,9 @@ export default function VirtualNumbersPage() {
                       <span className="text-[#a0a0b0]">Access Number: </span>
                       <span className="text-[#e0e0e0]">{orderData.access_number}</span>
                     </div>
+                  )}
+                  {typeof orderData === 'string' && (
+                    <div className="break-all text-[#e0e0e0]">{orderData}</div>
                   )}
                 </div>
               </div>
