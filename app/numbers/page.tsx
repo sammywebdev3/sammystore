@@ -101,7 +101,19 @@ export default function VirtualNumbersPage() {
 
     try {
       let endpoint = '';
-      let body: any = { service: selectedService };
+      // FIX: Add cost to the body so backend can check balance
+      let body: any = { 
+        service: selectedService,
+        cost: 500 // Default cost
+      };
+
+      // If using Server 2, try to get the price from the selected service
+      if (selectedServer === 'all2') {
+        const selectedServiceObj = services.find(s => (s.id || s.slug || s) === selectedService);
+        if (selectedServiceObj && selectedServiceObj.price) {
+          body.cost = parseFloat(selectedServiceObj.price);
+        }
+      }
 
       switch(selectedServer) {
         case 'usa1':
@@ -142,8 +154,10 @@ export default function VirtualNumbersPage() {
         setMsgType('success');
         setMsg('Number acquired!');
         setOrderData(data.parsed || data);
+        if (data.newBalance !== undefined) setBalance(data.newBalance);
       } else {
         setMsgType('error');
+        // FIX: Show the exact error from the backend (e.g., Insufficient funds)
         setMsg(data.error || data.rawResponse || 'Purchase failed');
       }
     } catch (error: any) {
@@ -184,7 +198,7 @@ export default function VirtualNumbersPage() {
                   : 'border-[#2a2a3a] bg-[#1a1a25] text-[#a0a0b0] hover:border-[#00f5ff]'
               }`}
             >
-              🇸 USA Server 1
+              🇺🇸 USA Server 1
             </button>
             <button
               onClick={() => setSelectedServer('all1')}
@@ -204,7 +218,7 @@ export default function VirtualNumbersPage() {
                   : 'border-[#2a2a3a] bg-[#1a1a25] text-[#a0a0b0] hover:border-[#00f5ff]'
               }`}
             >
-               All Countries Server 2
+              🌐 All Countries Server 2
             </button>
           </div>
 

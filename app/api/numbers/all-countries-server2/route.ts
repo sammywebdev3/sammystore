@@ -34,48 +34,40 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 500 });
     }
 
-    // Server 2 returns object with IDs as keys - convert to array and remove duplicates
+    // Convert object to array and FIX PRICING
     let result = [];
     const seen = new Set();
     
     if (Array.isArray(data)) {
-      result = data.filter(item => {
-        const name = item.name || item.code || item;
-        if (seen.has(name)) return false;
-        seen.add(name);
-        return true;
-      });
+      result = data;
     } else if (data && typeof data === 'object') {
-      if (Array.isArray(data.services)) {
-        result = data.services.filter(item => {
-          const name = item.name || item;
-          if (seen.has(name)) return false;
-          seen.add(name);
-          return true;
-        });
-      } else if (Array.isArray(data.countries)) {
-        result = data.countries.filter(item => {
-          const name = item.name || item.code || item;
-          if (seen.has(name)) return false;
-          seen.add(name);
-          return true;
-        });
-      } else {
-        // Convert object entries to array - THIS IS THE KEY FIX
-        result = Object.entries(data).map(([id, info]: [string, any]) => ({
-          id: id,
-          name: info.name || id,
-          price: parseFloat(info.price || 0),
-          formattedPrice: `₦${parseFloat(info.price || 0).toLocaleString()}`,
-          ...info
-        })).filter(item => {
-          // Remove duplicates by name
-          if (seen.has(item.name)) return false;
-          seen.add(item.name);
-          return true;
+      if (Array.isArray(data.services)) result = data.services;
+      else if (Array.isArray(data.countries)) result = data.countries;
+      else {
+        // Server 2 specific parsing
+        result = Object.entries(data).map(([id, info]: [string, any]) => {
+          // Look for price in multiple places: price, cost, retail
+          let rawPrice = info.price || info.cost || info.retail || 0;
+          // Ensure it's a number
+          let finalPrice = parseFloat(rawPrice);
+          if (isNaN(finalPrice)) finalPrice = 0;
+
+          return {
+            id: id,
+            name: info.name || id,
+            price: finalPrice,
+            formattedPrice: `₦${finalPrice.toLocaleString()}`
+          };
         });
       }
     }
+
+    // Remove duplicates
+    result = result.filter(item => {
+      if (seen.has(item.name)) return false;
+      seen.add(item.name);
+      return true;
+    });
 
     return NextResponse.json({ success: true, data: result, count: result.length });
 
