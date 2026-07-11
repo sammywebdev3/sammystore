@@ -10,26 +10,29 @@ async function tigerRequest(action: string, params: Record<string, any> = {}) {
     params: { api_key: API_KEY, action, ...params }
   });
   
+  // TigerSMS returns errors as plain strings starting with ERROR_
   if (typeof res.data === 'string' && res.data.startsWith('ERROR')) {
     throw new Error(res.data);
   }
   return res.data;
 }
 
+/**
+ * Get Countries - Uses getServicesList with lang=en for proper English names
+ * This avoids the broken getCountries endpoint that returns only numeric IDs
+ */
 export async function getCountries() {
-  // Use getServicesList which returns proper country names
-  const data = await tigerRequest('getServicesList');
+  const data = await tigerRequest('getServicesList', { lang: 'en' });
   
-  console.log('Raw services list:', JSON.stringify(data).substring(0, 1000));
+  // Extract unique countries from all services
+  const countryMap = new Map<string, string>();
   
-  // Extract unique countries from services list
-  const countryMap = new Map();
-  
-  Object.entries(data).forEach(([serviceId, serviceInfo]: [string, any]) => {
+  Object.values(data).forEach((serviceInfo: any) => {
     if (serviceInfo.countries && Array.isArray(serviceInfo.countries)) {
       serviceInfo.countries.forEach((country: any) => {
-        const id = String(country.id || country.code || country);
-        const name = country.title || country.name || country;
+        // country object has { id, title, name, iso } when lang=en is used
+        const id = String(country.id);
+        const name = country.title || country.name || country.iso || id;
         if (id && name && !countryMap.has(id)) {
           countryMap.set(id, name);
         }
@@ -37,20 +40,17 @@ export async function getCountries() {
     }
   });
   
-  // Convert to sorted array
-  const countries = Array.from(countryMap.entries())
+  return Array.from(countryMap.entries())
     .map(([id, name]) => ({ id, name }))
     .sort((a, b) => a.name.localeCompare(b.name));
-  
-  console.log('Processed countries count:', countries.length);
-  
-  return countries;
 }
 
+/**
+ * Get Services/Prices for a specific country
+ * Uses getPricesV3 as shown in your provided code
+ */
 export async function getServices(countryId: string) {
   const data = await tigerRequest('getPricesV3', { country: countryId });
-  
-  console.log('Raw services for country', countryId, ':', JSON.stringify(data).substring(0, 500));
   
   return Object.entries(data)
     .filter(([_, info]: [string, any]) => {
@@ -66,20 +66,48 @@ export async function getServices(countryId: string) {
     .sort((a, b) => a.price - b.price);
 }
 
+/**
+ * Buy Number - Uses getNumber with activationType=SMS and fixedPrice=true
+ * Exactly matching your provided fetch call
+ */
 export async function buyNumber(countryId: string, service: string) {
-  const data = await tigerRequest('getNumber', { country: countryId, service });
+  const data = await tigerRequest('getNumber', { 
+    country: countryId, 
+    service,
+    activationType: 'SMS',
+    fixedPrice: 'true'
+  });
   
   if (typeof data === 'string') throw new Error(data);
-  if (!data.activationId || !data.number) throw new Error('Failed to get number');
+  if (!data.activationId || !data.number) {
+    throw new Error('Failed to get number - invalid response');
+  }
   
   return { id: data.activationId, number: data.number };
 }
 
+/**
+ * Check SMS Status - Uses getStatus with full_text=false
+ * Exactly matching your provided fetch call
+ */
 export async function checkSms(activationId: string) {
-  const data = await tigerRequest('getStatus', { id: activationId });
+  const data = await tigerRequest('getStatus', { 
+    id: activationId,
+    full_text: 'false'
+  });
   
+  // Returns { activationId, text, code, country, receivedAt } when SMS arrives
+  // Returns status string like "STATUS_WAIT_CODE" when waiting
   if (typeof data === 'object' && data.code) {
     return { status: 'completed', sms: data.code };
   }
-  return { status: data, sms: null };
+  return { status: typeof data === 'string' ? data : 'unknown', sms: null };
+}
+
+/**
+ * Get Balance - For pre-purchase validation
+ */
+export async function getBalance() {
+  const data = await tigerRequest('getBalance');
+  return parseFloat(data);
 }
