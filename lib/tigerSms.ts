@@ -10,7 +10,6 @@ async function tigerRequest(action: string, params: Record<string, any> = {}) {
     params: { api_key: API_KEY, action, ...params }
   });
   
-  // Handle TigerSMS error strings
   if (typeof res.data === 'string' && res.data.startsWith('ERROR')) {
     throw new Error(res.data);
   }
@@ -18,19 +17,40 @@ async function tigerRequest(action: string, params: Record<string, any> = {}) {
 }
 
 export async function getCountries() {
-  const data = await tigerRequest('getCountries');
+  // Use getServicesList which returns proper country names
+  const data = await tigerRequest('getServicesList');
   
-  // Parse countries - handle both {id: "name"} and {id: {title: "name"}} formats
-  return Object.entries(data).map(([id, value]: [string, any]) => ({
-    id,
-    name: typeof value === 'string' 
-      ? value 
-      : (value.title || value.name || value.country || `Country ${id}`)
-  })).sort((a, b) => a.name.localeCompare(b.name));
+  console.log('Raw services list:', JSON.stringify(data).substring(0, 1000));
+  
+  // Extract unique countries from services list
+  const countryMap = new Map();
+  
+  Object.entries(data).forEach(([serviceId, serviceInfo]: [string, any]) => {
+    if (serviceInfo.countries && Array.isArray(serviceInfo.countries)) {
+      serviceInfo.countries.forEach((country: any) => {
+        const id = String(country.id || country.code || country);
+        const name = country.title || country.name || country;
+        if (id && name && !countryMap.has(id)) {
+          countryMap.set(id, name);
+        }
+      });
+    }
+  });
+  
+  // Convert to sorted array
+  const countries = Array.from(countryMap.entries())
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  
+  console.log('Processed countries count:', countries.length);
+  
+  return countries;
 }
 
 export async function getServices(countryId: string) {
   const data = await tigerRequest('getPricesV3', { country: countryId });
+  
+  console.log('Raw services for country', countryId, ':', JSON.stringify(data).substring(0, 500));
   
   return Object.entries(data)
     .filter(([_, info]: [string, any]) => {
