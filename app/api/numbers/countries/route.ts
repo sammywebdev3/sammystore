@@ -3,20 +3,23 @@ import { fiveSimRequest } from '@/lib/5sim';
 
 export async function GET() {
   try {
-    // Correct endpoint: /v1/guest/countries (not /user/countries)
     const data = await fiveSimRequest('/guest/countries');
     
-    console.log('Countries response:', data);
+    console.log('Raw countries data:', data);
     
-    // 5sim returns an array of country objects
-    if (Array.isArray(data)) {
+    // 5sim returns an object where keys are country names (lowercase)
+    // Each country has: iso, prefix, text_en, text_ru, virtual21, etc.
+    if (data && typeof data === 'object') {
+      const countries = Object.entries(data).map(([key, info]: [string, any]) => ({
+        code: info.iso || key,  // Use the ISO code if available, otherwise use the key
+        name: info.text_en || key.charAt(0).toUpperCase() + key.slice(1),
+        prefix: info.prefix || '',
+        img: info.img || null
+      })).sort((a, b) => a.name.localeCompare(b.name));
+      
       return NextResponse.json({ 
         success: true, 
-        countries: data.map((c: any) => ({
-          code: c.iso || c.name,
-          name: c.name,
-          img: c.img || null
-        })).sort((a: any, b: any) => a.name.localeCompare(b.name))
+        countries
       });
     }
     
@@ -25,8 +28,7 @@ export async function GET() {
     console.error('Countries API error:', error.response?.data || error.message);
     return NextResponse.json({ 
       success: false, 
-      error: error.message,
-      details: error.response?.data
+      error: error.message
     }, { status: 500 });
   }
 }
