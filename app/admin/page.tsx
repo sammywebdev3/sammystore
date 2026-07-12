@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 const CATEGORY_LABELS: Record<string, string> = {
   numbers: 'Virtual Numbers (TigerSMS)',
   smm: 'SMM Panel',
-  vtu: 'Airtime & Data',
   accounts: 'Buy Accounts',
 };
 
@@ -15,8 +14,8 @@ export default function AdminPage() {
   const [stats, setStats] = useState<any>({ totalUsers: 0, totalWalletBalance: 0, totalTransactions: 0 });
   const [users, setUsers] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [markups, setMarkups] = useState<Record<string, number>>({ numbers: 0, smm: 0, vtu: 0, accounts: 0 });
-  const [markupInputs, setMarkupInputs] = useState<Record<string, string>>({ numbers: '', smm: '', vtu: '', accounts: '' });
+  const [markups, setMarkups] = useState<Record<string, number>>({ numbers: 0, smm: 0, accounts: 0 });
+  const [markupInputs, setMarkupInputs] = useState<Record<string, string>>({ numbers: '', smm: '', accounts: '' });
   const [pricingSaving, setPricingSaving] = useState(false);
   const [pricingMsg, setPricingMsg] = useState('');
   const [pricingMsgType, setPricingMsgType] = useState('');
@@ -89,7 +88,6 @@ export default function AdminPage() {
         setMarkupInputs({
           numbers: String(data.markups.numbers),
           smm: String(data.markups.smm),
-          vtu: String(data.markups.vtu),
           accounts: String(data.markups.accounts),
         });
       }

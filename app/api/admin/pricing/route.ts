@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   return NextResponse.json({ success: true, markups });
 }
 
-const CATEGORIES: MarkupCategory[] = ['numbers', 'smm', 'vtu', 'accounts'];
+const CATEGORIES: MarkupCategory[] = ['numbers', 'smm', 'accounts'];
 
 export async function POST(request: Request) {
   const admin = await verifyAdmin(request);

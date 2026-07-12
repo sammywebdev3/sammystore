@@ -12,12 +12,11 @@ export function toNgn(usdPrice: number): number {
   return parseFloat((usdPrice * USD_TO_NGN_RATE).toFixed(2));
 }
 
-export type MarkupCategory = 'numbers' | 'smm' | 'vtu' | 'accounts';
+export type MarkupCategory = 'numbers' | 'smm' | 'accounts';
 
 const DEFAULT_MARKUPS: Record<MarkupCategory, number> = {
   numbers: 20,
   smm: 20,
-  vtu: 15,
   accounts: 20,
 };
 
@@ -38,7 +37,6 @@ export async function getMarkups(): Promise<Record<MarkupCategory, number>> {
   const markups: Record<MarkupCategory, number> = {
     numbers: doc?.markups?.numbers ?? DEFAULT_MARKUPS.numbers,
     smm: doc?.markups?.smm ?? DEFAULT_MARKUPS.smm,
-    vtu: doc?.markups?.vtu ?? DEFAULT_MARKUPS.vtu,
     accounts: doc?.markups?.accounts ?? DEFAULT_MARKUPS.accounts,
   };
 

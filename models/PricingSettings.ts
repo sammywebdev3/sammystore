@@ -9,7 +9,6 @@ export interface IPricingSettings extends Document {
   markups: {
     numbers: number;
     smm: number;
-    vtu: number;
     accounts: number;
   };
 }
@@ -20,7 +19,6 @@ const PricingSettingsSchema: Schema<IPricingSettings> = new Schema(
     markups: {
       numbers: { type: Number, default: 20 },
       smm: { type: Number, default: 20 },
-      vtu: { type: Number, default: 15 },
       accounts: { type: Number, default: 20 },
     },
   },

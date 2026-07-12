@@ -59,11 +59,6 @@ export default function DashboardPage() {
               <h3 className="text-xl font-bold mb-2 text-[#00f5ff]">Virtual Numbers</h3>
               <p className="text-[#a0a0b0] text-sm">Rent anonymous numbers</p>
             </Link>
-            <Link href="/vtu" className="card-dark group">
-              <div className="text-4xl mb-4">📶</div>
-              <h3 className="text-xl font-bold mb-2 text-[#00ff88]">Airtime & Data</h3>
-              <p className="text-[#a0a0b0] text-sm">Instant top-up</p>
-            </Link>
             <Link href="/smm" className="card-dark group">
               <div className="text-4xl mb-4">📊</div>
               <h3 className="text-xl font-bold mb-2 text-[#b829dd]">SMM Panel</h3>

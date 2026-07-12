@@ -10,6 +10,9 @@ export default function Sidebar() {
         <Link href="/numbers" className="text-[#a0a0b0] hover:text-[#00f5ff] font-mono text-sm transition-colors">
           {`> VIRTUAL NUMBERS`}
         </Link>
+        <Link href="/vtu" className="text-[#a0a0b0] hover:text-[#00ff88] font-mono text-sm transition-colors">
+          {`> AIRTIME & DATA`}
+        </Link>
         <Link href="/smm" className="text-[#a0a0b0] hover:text-[#b829dd] font-mono text-sm transition-colors">
           {`> SMM PANEL`}
         </Link>
