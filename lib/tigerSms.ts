@@ -5,7 +5,7 @@ const BASE_URL = 'https://api.tiger-sms.com/stubs/handler_api.php';
 
 if (!API_KEY) throw new Error('TIGER_SMS_API_KEY is not set');
 
-// Country ID map for getCountries endpoint fallback
+// Complete country ID to name mapping
 const COUNTRY_NAMES: Record<string, string> = {
   "6": "Russia", "7": "Ukraine", "8": "Kazakhstan", "9": "China",
   "10": "Philippines", "12": "Indonesia", "13": "Malaysia", "14": "Vietnam",
@@ -74,7 +74,6 @@ async function tigerRequest(action: string, params: Record<string, any> = {}) {
 }
 
 export async function getCountries() {
-  // Use YOUR VERIFIED getCountries endpoint
   const data = await tigerRequest('getCountries');
   
   if (!data || typeof data !== 'object') return [];
@@ -91,34 +90,51 @@ export async function getCountries() {
 }
 
 export async function getServices(countryId: string) {
-  // Use YOUR VERIFIED getServicesList endpoint with lang=en
-  const data = await tigerRequest('getServicesList', { 
-    country: countryId, 
-    lang: 'en' 
-  });
+  // BRUTE FORCE: Check each popular service individually using YOUR EXACT ENDPOINT FORMAT
+  const servicesToCheck = [
+    'wa', 'tg', 'go', 'ig', 'fb', 'tw', 'vk', 'ok', 
+    'mm', 'vi', 'ub', 'ya', 'li', 'sn', 'dc', 'nf'
+  ];
   
-  if (!data || typeof data !== 'object') return [];
-
-  // Extract services directly from the response
-  const services = Object.entries(data)
-    .filter(([_, info]: [string, any]) => {
-      // Check if service has availability
-      const count = typeof info === 'object' ? (info.count || 0) : 0;
-      return count > 0;
-    })
-    .map(([service, info]: [string, any]) => ({
-      service,
-      name: typeof info === 'object' ? (info.title || service.toUpperCase()) : service.toUpperCase(),
-      price: typeof info === 'object' ? parseFloat(info.cost || info.price || 0) : 0,
-      count: typeof info === 'object' ? (info.count || 0) : 0
-    }))
-    .sort((a, b) => a.price - b.price);
-
-  return services;
+  const availableServices: any[] = [];
+  
+  for (const service of servicesToCheck) {
+    try {
+      // Use YOUR EXACT getPricesV3 format: ?action=getPricesV3&service=X&country=Y
+      const data = await tigerRequest('getPricesV3', { 
+        service: service,
+        country: countryId 
+      });
+      
+      // If we got a valid response with price/count, add it
+      if (data && typeof data === 'object') {
+        const serviceData = data[service];
+        if (serviceData && typeof serviceData === 'object') {
+          const count = serviceData.count || 0;
+          const price = parseFloat(serviceData.cost || serviceData.price || 0);
+          
+          if (count > 0 && price > 0) {
+            availableServices.push({
+              service,
+              name: serviceData.title || service.toUpperCase(),
+              price,
+              count
+            });
+          }
+        }
+      }
+    } catch (e) {
+      // Service doesn't exist for this country, skip silently
+      continue;
+    }
+  }
+  
+  // Sort by price ascending
+  return availableServices.sort((a, b) => a.price - b.price);
 }
 
 export async function buyNumber(countryId: string, service: string) {
-  // Use YOUR VERIFIED getNumber endpoint with exact parameters
+  // Use YOUR EXACT getNumber format with activationType and fixedPrice
   const data = await tigerRequest('getNumber', { 
     country: countryId, 
     service,
@@ -133,7 +149,7 @@ export async function buyNumber(countryId: string, service: string) {
 }
 
 export async function checkSms(activationId: string) {
-  // Use YOUR VERIFIED getStatus endpoint
+  // Use YOUR EXACT getStatus format with full_text=false
   const data = await tigerRequest('getStatus', { 
     id: activationId,
     full_text: false 
