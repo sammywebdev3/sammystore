@@ -5,7 +5,7 @@ const BASE_URL = 'https://api.tiger-sms.com/stubs/handler_api.php';
 
 if (!API_KEY) throw new Error('TIGER_SMS_API_KEY is not set');
 
-// Complete country ID to name mapping
+// Country ID to name mapping
 const COUNTRY_NAMES: Record<string, string> = {
   "6": "Russia", "7": "Ukraine", "8": "Kazakhstan", "9": "China",
   "10": "Philippines", "12": "Indonesia", "13": "Malaysia", "14": "Vietnam",
@@ -16,147 +16,212 @@ const COUNTRY_NAMES: Record<string, string> = {
   "31": "Honduras", "32": "El Salvador", "33": "Nicaragua", "34": "Dominican Republic",
   "35": "Cuba", "36": "Puerto Rico", "37": "Jamaica", "38": "Trinidad and Tobago",
   "39": "Barbados", "40": "Bahamas", "41": "Belize", "42": "Guyana",
-  "43": "Suriname", "44": "French Guiana", "45": "Falkland Islands", "46": "South Georgia",
-  "47": "United States", "48": "Canada", "49": "United Kingdom", "50": "Germany",
-  "51": "France", "52": "Italy", "53": "Spain", "54": "Poland",
-  "55": "Romania", "56": "Netherlands", "57": "Belgium", "58": "Switzerland",
-  "59": "Austria", "60": "Sweden", "61": "Norway", "62": "Denmark",
-  "63": "Finland", "64": "Ireland", "65": "Portugal", "66": "Greece",
-  "67": "Czech Republic", "68": "Hungary", "69": "Slovakia", "70": "Slovenia",
-  "71": "Croatia", "72": "Serbia", "73": "Bosnia and Herzegovina", "74": "Montenegro",
-  "75": "North Macedonia", "76": "Albania", "77": "Bulgaria", "78": "Moldova",
-  "79": "Latvia", "80": "Lithuania", "81": "Estonia", "82": "Belarus",
-  "83": "Georgia", "84": "Armenia", "85": "Azerbaijan", "86": "Turkey",
-  "87": "Cyprus", "88": "Israel", "89": "Egypt", "90": "Saudi Arabia",
-  "91": "UAE", "92": "Qatar", "93": "Kuwait", "94": "Bahrain",
-  "95": "Oman", "96": "Jordan", "97": "Lebanon", "98": "Iraq",
-  "99": "Iran", "100": "Pakistan", "101": "Bangladesh", "102": "Sri Lanka",
-  "103": "Nepal", "104": "Myanmar", "105": "Cambodia", "106": "Laos",
-  "107": "Mongolia", "108": "Japan", "109": "South Korea", "110": "Taiwan",
-  "111": "Hong Kong", "112": "Macau", "113": "Singapore", "114": "Brunei",
-  "115": "Australia", "116": "New Zealand", "117": "Papua New Guinea", "118": "Fiji",
-  "119": "Solomon Islands", "120": "Vanuatu", "121": "Samoa", "122": "Tonga",
-  "123": "Kiribati", "124": "Tuvalu", "125": "Nauru", "126": "Palau",
-  "127": "Marshall Islands", "128": "Micronesia", "129": "Northern Mariana Islands", "130": "Guam",
-  "131": "American Samoa", "132": "Cook Islands", "133": "Niue", "134": "Tokelau",
-  "135": "Pitcairn Islands", "136": "Wallis and Futuna", "137": "French Polynesia", "138": "New Caledonia",
-  "139": "South Africa", "140": "Nigeria", "141": "Kenya", "142": "Ethiopia",
-  "143": "Tanzania", "144": "Uganda", "145": "Rwanda", "146": "Burundi",
-  "147": "Somalia", "148": "Djibouti", "149": "Eritrea", "150": "Sudan",
-  "151": "South Sudan", "152": "Chad", "153": "Central African Republic", "154": "Cameroon",
-  "155": "Equatorial Guinea", "156": "Gabon", "157": "Republic of the Congo", "158": "DR Congo",
-  "159": "Angola", "160": "Zambia", "161": "Malawi", "162": "Mozambique",
-  "163": "Zimbabwe", "164": "Botswana", "165": "Namibia", "166": "Lesotho",
-  "167": "Eswatini", "168": "Madagascar", "169": "Mauritius", "170": "Seychelles",
-  "171": "Comoros", "172": "Mayotte", "173": "Reunion", "174": "Western Sahara",
-  "175": "Morocco", "176": "Algeria", "177": "Tunisia", "178": "Libya",
-  "179": "Mali", "180": "Niger", "181": "Burkina Faso", "182": "Senegal",
-  "183": "Gambia", "184": "Guinea-Bissau", "185": "Guinea", "186": "Sierra Leone",
-  "187": "Liberia", "188": "Ivory Coast", "189": "Ghana", "190": "Togo",
-  "191": "Benin"
+  "43": "Suriname", "44": "French Guiana", "47": "United States", "48": "Canada",
+  "49": "United Kingdom", "50": "Germany", "51": "France", "52": "Italy",
+  "53": "Spain", "54": "Poland", "55": "Romania", "56": "Netherlands",
+  "57": "Belgium", "58": "Switzerland", "59": "Austria", "60": "Sweden",
+  "61": "Norway", "62": "Denmark", "63": "Finland", "64": "Ireland",
+  "65": "Portugal", "66": "Greece", "67": "Czech Republic", "68": "Hungary",
+  "69": "Slovakia", "70": "Slovenia", "71": "Croatia", "72": "Serbia",
+  "73": "Bosnia and Herzegovina", "74": "Montenegro", "75": "North Macedonia", "76": "Albania",
+  "77": "Bulgaria", "78": "Moldova", "79": "Latvia", "80": "Lithuania",
+  "81": "Estonia", "82": "Belarus", "83": "Georgia", "84": "Armenia",
+  "85": "Azerbaijan", "86": "Turkey", "87": "Cyprus", "88": "Israel",
+  "89": "Egypt", "90": "Saudi Arabia", "91": "UAE", "92": "Qatar",
+  "93": "Kuwait", "94": "Bahrain", "95": "Oman", "96": "Jordan",
+  "97": "Lebanon", "98": "Iraq", "99": "Iran", "100": "Pakistan",
+  "101": "Bangladesh", "102": "Sri Lanka", "103": "Nepal", "104": "Myanmar",
+  "105": "Cambodia", "106": "Laos", "107": "Mongolia", "108": "Japan",
+  "109": "South Korea", "110": "Taiwan", "111": "Hong Kong", "112": "Macau",
+  "113": "Singapore", "114": "Brunei", "115": "Australia", "116": "New Zealand",
+  "139": "South Africa", "140": "Nigeria", "141": "Kenya", "175": "Morocco",
+  "176": "Algeria", "177": "Tunisia", "178": "Libya"
+};
+
+// Service code to name mapping
+const SERVICE_NAMES: Record<string, string> = {
+  "wa": "WhatsApp", "tg": "Telegram", "go": "Google", "ig": "Instagram",
+  "fb": "Facebook", "tw": "Twitter", "vk": "VK", "ok": "OK",
+  "mm": "Viber", "vi": "Viber", "ub": "Uber", "ya": "Yandex",
+  "li": "LinkedIn", "sn": "Snapchat", "dc": "Discord", "nf": "Netflix"
 };
 
 async function tigerRequest(action: string, params: Record<string, any> = {}) {
   try {
-    const res = await axios.get(BASE_URL, {
-      params: { api_key: API_KEY, action, ...params }
+    const url = new URL(BASE_URL);
+    url.searchParams.set('api_key', API_KEY);
+    url.searchParams.set('action', action);
+    
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.set(key, String(value));
+    });
+
+    console.log(`[TigerSMS] Requesting: ${action}`, params);
+    
+    const res = await axios.get(url.toString(), {
+      timeout: 10000,
+      validateStatus: () => true
     });
     
-    if (typeof res.data === 'string') {
-      if (res.data.startsWith('ERROR')) throw new Error(res.data);
-      return res.data;
-    }
+    console.log(`[TigerSMS] Response for ${action}:`, res.data);
+    
     return res.data;
   } catch (error: any) {
-    console.error(`TigerSMS ${action} error:`, error.response?.data || error.message);
-    throw error;
+    console.error(`[TigerSMS] ${action} error:`, error.message);
+    throw new Error(`TigerSMS API Error: ${error.message}`);
   }
+}
+
+export async function getBalance() {
+  const data = await tigerRequest('getBalance');
+  
+  if (typeof data === 'string' && data.startsWith('ERROR')) {
+    throw new Error(`Balance error: ${data}`);
+  }
+  
+  // Response format: {"balance": 123.45}
+  if (typeof data === 'object' && data.balance) {
+    return parseFloat(data.balance);
+  }
+  
+  throw new Error('Invalid balance response');
 }
 
 export async function getCountries() {
   const data = await tigerRequest('getCountries');
   
-  if (!data || typeof data !== 'object') return [];
+  if (typeof data !== 'object' || Array.isArray(data)) {
+    throw new Error('Invalid countries response');
+  }
 
-  const countries = Object.keys(data)
-    .map(id => ({
+  const countries = Object.entries(data)
+    .map(([id, countryData]: [string, any]) => ({
       id,
-      name: COUNTRY_NAMES[id] || `Country ${id}`
+      name: COUNTRY_NAMES[id] || `Country ${id}`,
+      country: typeof countryData === 'object' ? countryData.country : id
     }))
-    .filter(c => c.name !== `Country ${c.id}`)
+    .filter(c => c.name && !c.name.includes('Country'))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return countries;
 }
 
-export async function getServices(countryId: string) {
-  // BRUTE FORCE: Check each popular service individually using YOUR EXACT ENDPOINT FORMAT
-  const servicesToCheck = [
-    'wa', 'tg', 'go', 'ig', 'fb', 'tw', 'vk', 'ok', 
-    'mm', 'vi', 'ub', 'ya', 'li', 'sn', 'dc', 'nf'
-  ];
+export async function getPrices(countryId: string) {
+  const data = await tigerRequest('getPricesV3', { country: countryId });
   
-  const availableServices: any[] = [];
-  
-  for (const service of servicesToCheck) {
-    try {
-      // Use YOUR EXACT getPricesV3 format: ?action=getPricesV3&service=X&country=Y
-      const data = await tigerRequest('getPricesV3', { 
-        service: service,
-        country: countryId 
-      });
-      
-      // If we got a valid response with price/count, add it
-      if (data && typeof data === 'object') {
-        const serviceData = data[service];
-        if (serviceData && typeof serviceData === 'object') {
-          const count = serviceData.count || 0;
-          const price = parseFloat(serviceData.cost || serviceData.price || 0);
-          
-          if (count > 0 && price > 0) {
-            availableServices.push({
-              service,
-              name: serviceData.title || service.toUpperCase(),
-              price,
-              count
-            });
-          }
-        }
-      }
-    } catch (e) {
-      // Service doesn't exist for this country, skip silently
-      continue;
-    }
+  if (typeof data === 'string' && data.startsWith('ERROR')) {
+    throw new Error(`Prices error: ${data}`);
   }
   
-  // Sort by price ascending
-  return availableServices.sort((a, b) => a.price - b.price);
+  if (typeof data !== 'object' || !data) {
+    throw new Error('No services available for this country');
+  }
+
+  const services = Object.entries(data)
+    .map(([serviceCode, serviceData]: [string, any]) => ({
+      service: serviceCode,
+      name: SERVICE_NAMES[serviceCode] || serviceCode.toUpperCase(),
+      price: parseFloat(serviceData.cost || serviceData.price || 0),
+      count: parseInt(serviceData.count || 0)
+    }))
+    .filter(s => s.price > 0 && s.count > 0)
+    .sort((a, b) => a.price - b.price);
+
+  return services;
 }
 
-export async function buyNumber(countryId: string, service: string) {
-  // Use YOUR EXACT getNumber format with activationType and fixedPrice
-  const data = await tigerRequest('getNumber', { 
-    country: countryId, 
-    service,
+export async function buyNumber(countryId: string, serviceCode: string) {
+  const data = await tigerRequest('getNumber', {
+    country: countryId,
+    service: serviceCode,
     activationType: 'SMS',
-    fixedPrice: true 
+    fixedPrice: 'true'
   });
   
-  if (typeof data === 'string') throw new Error(data);
-  if (!data.activationId || !data.number) throw new Error('Invalid response: missing activationId or number');
+  if (typeof data === 'string' && data.startsWith('ERROR')) {
+    throw new Error(`Buy number error: ${data}`);
+  }
   
-  return { id: data.activationId, number: data.number };
+  if (typeof data !== 'object') {
+    throw new Error('Invalid buy number response');
+  }
+  
+  // Response format: {"id": 123456789, "number": "+1234567890", "server": 1}
+  if (!data.id || !data.number) {
+    throw new Error(`Invalid response: ${JSON.stringify(data)}`);
+  }
+  
+  return {
+    id: String(data.id),
+    number: String(data.number),
+    server: data.server
+  };
 }
 
 export async function checkSms(activationId: string) {
-  // Use YOUR EXACT getStatus format with full_text=false
-  const data = await tigerRequest('getStatus', { 
+  const data = await tigerRequest('getStatusV2', { id: activationId });
+  
+  if (typeof data === 'string' && data.startsWith('ERROR')) {
+    throw new Error(`Status error: ${data}`);
+  }
+  
+  // Possible status values:
+  // 0 - SMS not received
+  // 1 - SMS received
+  // 6 - Activation cancelled
+  // 8 - Number released
+  // 10 - SMS received, activation completed
+  // (normal string response contains the code)
+  
+  if (typeof data === 'object' && data.sms) {
+    return {
+      status: 'completed',
+      sms: data.sms,
+      statusCode: 1
+    };
+  }
+  
+  if (typeof data === 'string') {
+    const statusCode = parseInt(data);
+    if (statusCode === 0) {
+      return { status: 'pending', sms: null, statusCode: 0 };
+    }
+    if (statusCode === 1 || statusCode === 10) {
+      return { status: 'completed', sms: data.replace(/^[0-9]+\|/, ''), statusCode };
+    }
+    if (statusCode === 6) {
+      return { status: 'cancelled', sms: null, statusCode: 6 };
+    }
+    if (statusCode === 8) {
+      return { status: 'released', sms: null, statusCode: 8 };
+    }
+  }
+  
+  return { status: 'unknown', sms: null, statusCode: -1 };
+}
+
+export async function cancelActivation(activationId: string) {
+  const data = await tigerRequest('setStatusV2', {
     id: activationId,
-    full_text: false 
+    status: 8
   });
   
-  if (typeof data === 'object' && data.code) {
-    return { status: 'completed', sms: data.code };
+  if (typeof data === 'string' && data === '1') {
+    return { success: true };
   }
-  return { status: data, sms: null };
+  
+  throw new Error(`Failed to cancel activation: ${data}`);
+}
+
+export async function getServicesList(countryCode: string = 'US') {
+  const data = await tigerRequest('getServicesList', {
+    country: countryCode,
+    lang: 'en'
+  });
+  
+  if (typeof data !== 'object' || !data) {
+    throw new Error('No services list available');
+  }
+  
+  return data;
 }
