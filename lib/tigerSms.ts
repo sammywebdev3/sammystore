@@ -5,39 +5,6 @@ const BASE_URL = 'https://api.tiger-sms.com/stubs/handler_api.php';
 
 if (!API_KEY) throw new Error('TIGER_SMS_API_KEY is not set');
 
-// Country ID to name mapping
-const COUNTRY_NAMES: Record<string, string> = {
-  "6": "Russia", "7": "Ukraine", "8": "Kazakhstan", "9": "China",
-  "10": "Philippines", "12": "Indonesia", "13": "Malaysia", "14": "Vietnam",
-  "15": "Thailand", "16": "India", "17": "Brazil", "18": "Colombia",
-  "19": "Mexico", "20": "Argentina", "21": "Peru", "22": "Chile",
-  "23": "Ecuador", "24": "Bolivia", "25": "Paraguay", "26": "Uruguay",
-  "27": "Venezuela", "28": "Costa Rica", "29": "Panama", "30": "Guatemala",
-  "31": "Honduras", "32": "El Salvador", "33": "Nicaragua", "34": "Dominican Republic",
-  "35": "Cuba", "36": "Puerto Rico", "37": "Jamaica", "38": "Trinidad and Tobago",
-  "39": "Barbados", "40": "Bahamas", "41": "Belize", "42": "Guyana",
-  "43": "Suriname", "44": "French Guiana", "47": "United States", "48": "Canada",
-  "49": "United Kingdom", "50": "Germany", "51": "France", "52": "Italy",
-  "53": "Spain", "54": "Poland", "55": "Romania", "56": "Netherlands",
-  "57": "Belgium", "58": "Switzerland", "59": "Austria", "60": "Sweden",
-  "61": "Norway", "62": "Denmark", "63": "Finland", "64": "Ireland",
-  "65": "Portugal", "66": "Greece", "67": "Czech Republic", "68": "Hungary",
-  "69": "Slovakia", "70": "Slovenia", "71": "Croatia", "72": "Serbia",
-  "73": "Bosnia and Herzegovina", "74": "Montenegro", "75": "North Macedonia", "76": "Albania",
-  "77": "Bulgaria", "78": "Moldova", "79": "Latvia", "80": "Lithuania",
-  "81": "Estonia", "82": "Belarus", "83": "Georgia", "84": "Armenia",
-  "85": "Azerbaijan", "86": "Turkey", "87": "Cyprus", "88": "Israel",
-  "89": "Egypt", "90": "Saudi Arabia", "91": "UAE", "92": "Qatar",
-  "93": "Kuwait", "94": "Bahrain", "95": "Oman", "96": "Jordan",
-  "97": "Lebanon", "98": "Iraq", "99": "Iran", "100": "Pakistan",
-  "101": "Bangladesh", "102": "Sri Lanka", "103": "Nepal", "104": "Myanmar",
-  "105": "Cambodia", "106": "Laos", "107": "Mongolia", "108": "Japan",
-  "109": "South Korea", "110": "Taiwan", "111": "Hong Kong", "112": "Macau",
-  "113": "Singapore", "114": "Brunei", "115": "Australia", "116": "New Zealand",
-  "139": "South Africa", "140": "Nigeria", "141": "Kenya", "175": "Morocco",
-  "176": "Algeria", "177": "Tunisia", "178": "Libya"
-};
-
 // Service code to name mapping
 const SERVICE_NAMES: Record<string, string> = {
   "wa": "WhatsApp", "tg": "Telegram", "go": "Google", "ig": "Instagram",
@@ -79,9 +46,13 @@ export async function getBalance() {
     throw new Error(`Balance error: ${data}`);
   }
   
-  // Response format: {"balance": 123.45}
+  // Response format: {"balance": 123.45} or just a number
   if (typeof data === 'object' && data.balance) {
     return parseFloat(data.balance);
+  }
+  
+  if (typeof data === 'number') {
+    return data;
   }
   
   throw new Error('Invalid balance response');
@@ -90,17 +61,20 @@ export async function getBalance() {
 export async function getCountries() {
   const data = await tigerRequest('getCountries');
   
-  if (typeof data !== 'object' || Array.isArray(data)) {
-    throw new Error('Invalid countries response');
+  // Data should be an array: [{id, eng, rus, chn, visible, retry}, ...]
+  if (!Array.isArray(data)) {
+    console.error('Expected array, got:', typeof data, data);
+    throw new Error('Invalid countries response - expected array');
   }
 
-  const countries = Object.entries(data)
-    .map(([id, countryData]: [string, any]) => ({
-      id,
-      name: COUNTRY_NAMES[id] || `Country ${id}`,
-      country: typeof countryData === 'object' ? countryData.country : id
+  // Map the response to our format
+  const countries = data
+    .map((countryData: any) => ({
+      id: String(countryData.id),
+      name: countryData.eng || countryData.rus || `Country ${countryData.id}`,
+      visible: countryData.visible
     }))
-    .filter(c => c.name && !c.name.includes('Country'))
+    .filter(c => c.visible === 1) // Only show visible countries
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return countries;
