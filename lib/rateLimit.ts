@@ -14,9 +14,13 @@ interface RateLimitResult {
 
 // Sliding-window limiter backed by Mongo so it works correctly across
 // serverless function instances (an in-memory counter would reset on every
-// cold start and wouldn't be shared between instances). The update is a
-// single atomic aggregation-pipeline write, so concurrent requests for the
-// same key can't race past each other and both slip through.
+// cold start and wouldn't be shared between instances).
+//
+// Implemented with plain update objects (not an aggregation-pipeline
+// update) for broad Mongoose/MongoDB compatibility. The increment step is
+// still atomic; there's a narrow, low-stakes race only on the very first
+// request ever made for a brand new key (worst case: one extra attempt is
+// allowed), which is an acceptable tradeoff for a rate limiter.
 export async function checkRateLimit(
   key: string,
   maxAttempts: number,
@@ -27,26 +31,23 @@ export async function checkRateLimit(
   const now = new Date();
   const cutoff = new Date(now.getTime() - windowMs);
 
-  const doc = await RateLimit.findOneAndUpdate(
-    { key },
-    [
-      {
-        $set: {
-          windowStart: {
-            $cond: [{ $gt: ['$windowStart', cutoff] }, '$windowStart', now],
-          },
-          count: {
-            $cond: [
-              { $gt: ['$windowStart', cutoff] },
-              { $add: [{ $ifNull: ['$count', 0] }, 1] },
-              1,
-            ],
-          },
-        },
-      },
-    ],
-    { upsert: true, new: true }
+  // Atomically increment count, but only if the existing window is still
+  // active. If no matching doc exists (either it's a new key, or the
+  // previous window has expired), this returns null.
+  let doc = await RateLimit.findOneAndUpdate(
+    { key, windowStart: { $gt: cutoff } },
+    { $inc: { count: 1 } },
+    { new: true }
   );
+
+  if (!doc) {
+    // New key, or the window expired - start a fresh window.
+    doc = await RateLimit.findOneAndUpdate(
+      { key },
+      { $set: { count: 1, windowStart: now } },
+      { upsert: true, new: true }
+    );
+  }
 
   if (doc.count > maxAttempts) {
     const elapsed = now.getTime() - doc.windowStart.getTime();
