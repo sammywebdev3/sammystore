@@ -1,10 +1,11 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 
 export default function SmmPage() {
   const [services, setServices] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedService, setSelectedService] = useState('');
   const [link, setLink] = useState('');
   const [quantity, setQuantity] = useState('1000');
@@ -32,11 +33,27 @@ export default function SmmPage() {
     setLoading(false);
   };
 
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    services.forEach((s) => set.add(s.category || 'Other'));
+    return Array.from(set).sort();
+  }, [services]);
+
+  const servicesInCategory = useMemo(() => {
+    if (!selectedCategory) return [];
+    return services.filter((s) => (s.category || 'Other') === selectedCategory);
+  }, [services, selectedCategory]);
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+    setSelectedService('');
+  };
+
   const handleOrder = async () => {
     setPurchasing(true);
     setMsg('');
     setOrderData(null);
-    
+
     const token = localStorage.getItem('token');
     if (!token) {
       setMsgType('error');
@@ -48,18 +65,18 @@ export default function SmmPage() {
     try {
       const res = await fetch('/api/smm/order', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           service: selectedService,
           link,
           quantity: parseInt(quantity)
         })
       });
       const data = await res.json();
-      
+
       if (data.success) {
         setMsgType('success');
         setMsg('Order placed successfully!');
@@ -87,21 +104,44 @@ export default function SmmPage() {
           </div>
 
           <div className="card p-6 md:p-8 max-w-2xl">
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Select Service</label>
-              <select
-                value={selectedService}
-                onChange={(e) => setSelectedService(e.target.value)}
-                className="input-field"
-              >
-                <option value="">Choose a service...</option>
-                {services.map((service: any) => (
-                  <option key={service.service} value={service.service}>
-                    {service.name} - ₦{service.rate}/1000
-                  </option>
-                ))}
-              </select>
-            </div>
+            {loading ? (
+              <p className="text-gray-600">Loading services...</p>
+            ) : (
+              <>
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                    className="input-field"
+                  >
+                    <option value="">Choose a category...</option>
+                    {categories.map((category) => (
+                      <option key={category} value={category}>{category}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Select Service</label>
+                  <select
+                    value={selectedService}
+                    onChange={(e) => setSelectedService(e.target.value)}
+                    className="input-field"
+                    disabled={!selectedCategory}
+                  >
+                    <option value="">
+                      {selectedCategory ? 'Choose a service...' : 'Select a category first'}
+                    </option>
+                    {servicesInCategory.map((service: any) => (
+                      <option key={service.service} value={service.service}>
+                        {service.name} - ₦{service.rate.toLocaleString()}/1000
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
 
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">Target Link</label>
