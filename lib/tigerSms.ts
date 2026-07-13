@@ -3,8 +3,6 @@ import axios from 'axios';
 const API_KEY = process.env.TIGER_SMS_API_KEY;
 const BASE_URL = 'https://api.tiger-sms.com/stubs/handler_api.php';
 
-if (!API_KEY) throw new Error('TIGER_SMS_API_KEY is not set');
-
 // Service code to name mapping
 const SERVICE_NAMES: Record<string, string> = {
   "wa": "WhatsApp", "tg": "Telegram", "go": "Google", "ig": "Instagram",
@@ -14,6 +12,7 @@ const SERVICE_NAMES: Record<string, string> = {
 };
 
 async function tigerRequest(action: string, params: Record<string, any> = {}) {
+  if (!API_KEY) throw new Error('TIGER_SMS_API_KEY is not set');
   try {
     const url = new URL(BASE_URL);
     url.searchParams.set('api_key', API_KEY);
