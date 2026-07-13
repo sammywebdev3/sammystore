@@ -1,13 +1,21 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [balance, setBalance] = useState<number | null>(null);
   const [cartCount, setCartCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = searchQuery.trim();
+    if (q) router.push(`/search?q=${encodeURIComponent(q)}`);
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -40,7 +48,24 @@ export default function Navbar() {
         <span className="text-[#8c0018]">STORE</span>
       </Link>
 
+      <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-sm mx-4">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search accounts & SMM services..."
+          className="w-full px-3 py-1.5 rounded-lg bg-[#1a1a25] border border-[#2a2a3a] text-sm text-[#e0e0e0] placeholder-[#5a5a6a] focus:outline-none focus:border-[#e11d3f]/50 transition-colors"
+        />
+      </form>
+
       <div className="flex items-center gap-4">
+        <Link
+          href="/search"
+          className="md:hidden p-2 rounded-lg hover:bg-[#1a1a25] transition-colors"
+          aria-label="Search"
+        >
+          <span className="text-xl">🔍</span>
+        </Link>
         {balance !== null && (
           <Link
             href="/fund"
