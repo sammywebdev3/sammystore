@@ -212,12 +212,12 @@ export default function AdminPage() {
           <p className="text-4xl font-bold text-[#e11d3f]">{stats.totalUsers}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-[#1a1a25] to-[#0f0f16] border border-[#ffd700]/30 rounded-xl p-6 hover:shadow-[0_0_30px_rgba(255,215,0,0.3)] transition-all">
+        <div className="bg-gradient-to-br from-[#1a1a25] to-[#0f0f16] border border-[#e6a817]/30 rounded-xl p-6 hover:shadow-[0_0_30px_rgba(255,215,0,0.3)] transition-all">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-[#a0a0b0] font-mono text-sm">{`> TOTAL_WALLET_BALANCE`}</h3>
             <span className="text-3xl">💰</span>
           </div>
-          <p className="text-4xl font-bold text-[#ffd700]">₦{stats.totalWalletBalance.toLocaleString()}</p>
+          <p className="text-4xl font-bold text-[#e6a817]">₦{stats.totalWalletBalance.toLocaleString()}</p>
         </div>
 
         <div className="bg-gradient-to-br from-[#1a1a25] to-[#0f0f16] border border-[#25d366]/30 rounded-xl p-6 hover:shadow-[0_0_30px_rgba(37,211,102,0.3)] transition-all">
@@ -230,7 +230,7 @@ export default function AdminPage() {
       </div>
 
       {msg && (
-        <div className={`mb-6 p-4 rounded-lg border ${msgType === 'success' ? 'border-[#25d366] bg-[#25d366]/10 text-[#25d366]' : 'border-[#ff2a6d] bg-[#ff2a6d]/10 text-[#ff2a6d]'}`}>
+        <div className={`mb-6 p-4 rounded-lg border ${msgType === 'success' ? 'border-[#25d366] bg-[#25d366]/10 text-[#25d366]' : 'border-[#e11d3f] bg-[#e11d3f]/10 text-[#e11d3f]'}`}>
           <p className="font-mono font-bold">{msg}</p>
         </div>
       )}
@@ -242,7 +242,7 @@ export default function AdminPage() {
         <button onClick={() => setActiveTab('transactions')} className={`px-6 py-3 rounded-lg font-mono font-bold transition-all ${activeTab === 'transactions' ? 'bg-[#8c0018] text-white' : 'bg-[#1a1a25] text-[#a0a0b0] border border-[#2a2a3a]'}`}>
            TRANSACTIONS
         </button>
-        <button onClick={() => setActiveTab('pricing')} className={`px-6 py-3 rounded-lg font-mono font-bold transition-all ${activeTab === 'pricing' ? 'bg-[#ffd700] text-black' : 'bg-[#1a1a25] text-[#a0a0b0] border border-[#2a2a3a]'}`}>
+        <button onClick={() => setActiveTab('pricing')} className={`px-6 py-3 rounded-lg font-mono font-bold transition-all ${activeTab === 'pricing' ? 'bg-[#e6a817] text-black' : 'bg-[#1a1a25] text-[#a0a0b0] border border-[#2a2a3a]'}`}>
           💲 PRICING
         </button>
       </div>
@@ -284,13 +284,13 @@ export default function AdminPage() {
                     </td>
                     <td className="p-4 text-[#a0a0b0]">{user.email}</td>
                     <td className="p-4">
-                      <span className="px-3 py-1 bg-[#ffd700]/10 border border-[#ffd700]/30 rounded-full text-[#ffd700] font-mono">
+                      <span className="px-3 py-1 bg-[#e6a817]/10 border border-[#e6a817]/30 rounded-full text-[#e6a817] font-mono">
                         ₦{(user.walletBalance || 0).toLocaleString()}
                       </span>
                     </td>
                     <td className="p-4">
                       {user.suspended ? (
-                        <span className="px-3 py-1 bg-[#ff2a6d]/10 border border-[#ff2a6d]/30 rounded-full text-[#ff2a6d] font-mono text-xs">
+                        <span className="px-3 py-1 bg-[#e11d3f]/10 border border-[#e11d3f]/30 rounded-full text-[#e11d3f] font-mono text-xs">
                           SUSPENDED
                         </span>
                       ) : (
@@ -304,7 +304,7 @@ export default function AdminPage() {
                         <button onClick={() => setModal({ type: 'add', userId: user._id, userName: user.name })} className="px-3 py-1 bg-[#25d366]/20 border border-[#25d366]/30 rounded text-[#25d366] text-xs font-mono hover:bg-[#25d366]/30">
                           + ADD
                         </button>
-                        <button onClick={() => setModal({ type: 'deduct', userId: user._id, userName: user.name })} className="px-3 py-1 bg-[#ff2a6d]/20 border border-[#ff2a6d]/30 rounded text-[#ff2a6d] text-xs font-mono hover:bg-[#ff2a6d]/30">
+                        <button onClick={() => setModal({ type: 'deduct', userId: user._id, userName: user.name })} className="px-3 py-1 bg-[#e11d3f]/20 border border-[#e11d3f]/30 rounded text-[#e11d3f] text-xs font-mono hover:bg-[#e11d3f]/30">
                           - DEDUCT
                         </button>
                         {user.suspended ? (
@@ -312,11 +312,11 @@ export default function AdminPage() {
                             UNSUSPEND
                           </button>
                         ) : (
-                          <button onClick={() => setModal({ type: 'suspend', userId: user._id, userName: user.name })} className="px-3 py-1 bg-[#ffd700]/20 border border-[#ffd700]/30 rounded text-[#ffd700] text-xs font-mono hover:bg-[#ffd700]/30">
+                          <button onClick={() => setModal({ type: 'suspend', userId: user._id, userName: user.name })} className="px-3 py-1 bg-[#e6a817]/20 border border-[#e6a817]/30 rounded text-[#e6a817] text-xs font-mono hover:bg-[#e6a817]/30">
                             SUSPEND
                           </button>
                         )}
-                        <button onClick={() => setModal({ type: 'delete', userId: user._id, userName: user.name })} className="px-3 py-1 bg-[#ff2a6d]/20 border border-[#ff2a6d]/30 rounded text-[#ff2a6d] text-xs font-mono hover:bg-[#ff2a6d]/30">
+                        <button onClick={() => setModal({ type: 'delete', userId: user._id, userName: user.name })} className="px-3 py-1 bg-[#e11d3f]/20 border border-[#e11d3f]/30 rounded text-[#e11d3f] text-xs font-mono hover:bg-[#e11d3f]/30">
                           DELETE
                         </button>
                       </div>
@@ -348,9 +348,9 @@ export default function AdminPage() {
                   <tr key={txn._id} className="border-b border-[#2a2a3a] hover:bg-[#1a1a25]/50">
                     <td className="p-4 text-[#e0e0e0] uppercase font-mono text-xs">{txn.type}</td>
                     <td className="p-4 text-[#a0a0b0] text-sm">{txn.description}</td>
-                    <td className="p-4 text-[#ffd700] font-mono">₦{txn.amount?.toLocaleString()}</td>
+                    <td className="p-4 text-[#e6a817] font-mono">₦{txn.amount?.toLocaleString()}</td>
                     <td className="p-4">
-                      <span className={`px-2 py-1 rounded text-xs font-mono ${txn.status === 'success' ? 'bg-[#25d366]/10 text-[#25d366]' : txn.status === 'pending' ? 'bg-[#ffd700]/10 text-[#ffd700]' : 'bg-[#ff2a6d]/10 text-[#ff2a6d]'}`}>
+                      <span className={`px-2 py-1 rounded text-xs font-mono ${txn.status === 'success' ? 'bg-[#25d366]/10 text-[#25d366]' : txn.status === 'pending' ? 'bg-[#e6a817]/10 text-[#e6a817]' : 'bg-[#e11d3f]/10 text-[#e11d3f]'}`}>
                         {txn.status.toUpperCase()}
                       </span>
                     </td>
@@ -373,7 +373,7 @@ export default function AdminPage() {
           </p>
 
           {pricingMsg && (
-            <div className={`mb-6 p-4 rounded-lg border ${pricingMsgType === 'success' ? 'border-[#25d366] bg-[#25d366]/10 text-[#25d366]' : 'border-[#ff2a6d] bg-[#ff2a6d]/10 text-[#ff2a6d]'}`}>
+            <div className={`mb-6 p-4 rounded-lg border ${pricingMsgType === 'success' ? 'border-[#25d366] bg-[#25d366]/10 text-[#25d366]' : 'border-[#e11d3f] bg-[#e11d3f]/10 text-[#e11d3f]'}`}>
               <p className="font-mono font-bold">{pricingMsg}</p>
             </div>
           )}
@@ -402,7 +402,7 @@ export default function AdminPage() {
           <button
             onClick={handleSavePricing}
             disabled={pricingSaving}
-            className="px-6 py-3 bg-[#ffd700] text-black rounded-lg font-mono font-bold hover:bg-[#ffd700]/80 disabled:opacity-50"
+            className="px-6 py-3 bg-[#e6a817] text-black rounded-lg font-mono font-bold hover:bg-[#e6a817]/80 disabled:opacity-50"
           >
             {pricingSaving ? 'SAVING...' : 'SAVE PRICING'}
           </button>
@@ -447,11 +447,11 @@ export default function AdminPage() {
 
             {modal.type === 'suspend' && (
               <div className="mb-4">
-                <label className="block text-[#ffd700] text-sm font-mono mb-2">{`> SUSPENSION_REASON`}</label>
+                <label className="block text-[#e6a817] text-sm font-mono mb-2">{`> SUSPENSION_REASON`}</label>
                 <textarea
                   value={modalSuspendReason}
                   onChange={(e) => setModalSuspendReason(e.target.value)}
-                  className="w-full px-4 py-2 bg-[#0f0f16] border border-[#2a2a3a] rounded-lg text-[#e0e0e0] focus:border-[#ffd700] focus:outline-none"
+                  className="w-full px-4 py-2 bg-[#0f0f16] border border-[#2a2a3a] rounded-lg text-[#e0e0e0] focus:border-[#e6a817] focus:outline-none"
                   rows={3}
                   placeholder="Why is this user being suspended?"
                 />
@@ -459,7 +459,7 @@ export default function AdminPage() {
             )}
 
             {modal.type === 'delete' && (
-              <p className="text-[#ff2a6d] font-mono mb-4">
+              <p className="text-[#e11d3f] font-mono mb-4">
                 This will permanently delete the user and all their transactions. This action cannot be undone.
               </p>
             )}
@@ -470,10 +470,10 @@ export default function AdminPage() {
                 disabled={actionLoading || (modalAmount === '' && (modal.type === 'add' || modal.type === 'deduct'))}
                 className={`flex-1 py-3 rounded-lg font-bold font-mono transition-all ${
                   modal.type === 'add' ? 'bg-[#25d366] text-black hover:bg-[#25d366]/80' :
-                  modal.type === 'deduct' ? 'bg-[#ff2a6d] text-white hover:bg-[#ff2a6d]/80' :
-                  modal.type === 'suspend' ? 'bg-[#ffd700] text-black hover:bg-[#ffd700]/80' :
+                  modal.type === 'deduct' ? 'bg-[#e11d3f] text-white hover:bg-[#e11d3f]/80' :
+                  modal.type === 'suspend' ? 'bg-[#e6a817] text-black hover:bg-[#e6a817]/80' :
                   modal.type === 'unsuspend' ? 'bg-[#e11d3f] text-black hover:bg-[#e11d3f]/80' :
-                  'bg-[#ff2a6d] text-white hover:bg-[#ff2a6d]/80'
+                  'bg-[#e11d3f] text-white hover:bg-[#e11d3f]/80'
                 } disabled:opacity-50`}
               >
                 {actionLoading ? 'PROCESSING...' : 'CONFIRM'}

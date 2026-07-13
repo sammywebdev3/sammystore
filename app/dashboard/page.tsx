@@ -33,8 +33,8 @@ export default function DashboardPage() {
           </div>
           
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <div className="card-dark bg-gradient-to-br from-[#00f5ff]/10 to-[#0080ff]/10 border-[#00f5ff]/30">
-              <h3 className="text-[#00f5ff] text-sm font-mono mb-2">{`> WALLET_BALANCE`}</h3>
+            <div className="card-dark bg-gradient-to-br from-[#e11d3f]/10 to-[#0080ff]/10 border-[#e11d3f]/30">
+              <h3 className="text-[#e11d3f] text-sm font-mono mb-2">{`> WALLET_BALANCE`}</h3>
               <p className="text-3xl md:text-4xl font-bold text-[#e0e0e0] mb-4">₦{balance.toLocaleString()}.00</p>
               <Link href="/fund" className="btn-neon-green text-sm py-2 px-4 inline-block">
                 FUND WALLET
@@ -42,12 +42,12 @@ export default function DashboardPage() {
             </div>
             
             <div className="card-dark">
-              <h3 className="text-[#b829dd] text-sm font-mono mb-2">{`> TOTAL_TRANSACTIONS`}</h3>
+              <h3 className="text-[#8c0018] text-sm font-mono mb-2">{`> TOTAL_TRANSACTIONS`}</h3>
               <p className="text-3xl md:text-4xl font-bold text-[#e0e0e0]">0</p>
             </div>
             
             <div className="card-dark">
-              <h3 className="text-[#00ff88] text-sm font-mono mb-2">{`> ACTIVE_NUMBERS`}</h3>
+              <h3 className="text-[#25d366] text-sm font-mono mb-2">{`> ACTIVE_NUMBERS`}</h3>
               <p className="text-3xl md:text-4xl font-bold text-[#e0e0e0]">0</p>
             </div>
           </div>
@@ -56,17 +56,17 @@ export default function DashboardPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Link href="/numbers" className="card-dark group">
               <div className="text-4xl mb-4">📡</div>
-              <h3 className="text-xl font-bold mb-2 text-[#00f5ff]">Virtual Numbers</h3>
+              <h3 className="text-xl font-bold mb-2 text-[#e11d3f]">Virtual Numbers</h3>
               <p className="text-[#a0a0b0] text-sm">Rent anonymous numbers</p>
             </Link>
             <Link href="/smm" className="card-dark group">
               <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-xl font-bold mb-2 text-[#b829dd]">SMM Panel</h3>
+              <h3 className="text-xl font-bold mb-2 text-[#8c0018]">SMM Panel</h3>
               <p className="text-[#a0a0b0] text-sm">Social media boost</p>
             </Link>
             <Link href="/accounts" className="card-dark group">
               <div className="text-4xl mb-4"></div>
-              <h3 className="text-xl font-bold mb-2 text-[#ffd700]">Buy Accounts</h3>
+              <h3 className="text-xl font-bold mb-2 text-[#e6a817]">Buy Accounts</h3>
               <p className="text-[#a0a0b0] text-sm">Pre-verified accounts</p>
             </Link>
           </div>

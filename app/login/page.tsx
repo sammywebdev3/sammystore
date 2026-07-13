@@ -39,26 +39,26 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
       <div className="card-dark w-full max-w-md">
         <h2 className="text-3xl font-bold text-center mb-2">
-          <span className="text-[#00f5ff]">SAMMY</span><span className="text-[#b829dd]">STORE</span>
+          <span className="text-[#e11d3f]">SAMMY</span><span className="text-[#8c0018]">STORE</span>
         </h2>
         <p className="text-center text-[#a0a0b0] mb-8 font-mono text-sm">{`> SECURE LOGIN GATEWAY`}</p>
         
         <form onSubmit={handleLogin} className="space-y-6">
           <div>
-            <label className="block text-[#00f5ff] text-sm font-mono mb-2">{`> EMAIL_ADDRESS`}</label>
+            <label className="block text-[#e11d3f] text-sm font-mono mb-2">{`> EMAIL_ADDRESS`}</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-dark" required />
           </div>
           <div>
-            <label className="block text-[#00f5ff] text-sm font-mono mb-2">{`> PASSWORD`}</label>
+            <label className="block text-[#e11d3f] text-sm font-mono mb-2">{`> PASSWORD`}</label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-dark" required />
           </div>
           <button type="submit" disabled={loading} className="btn-neon-green w-full">
             {loading ? 'AUTHENTICATING...' : 'LOGIN'}
           </button>
         </form>
-        {msg && <p className="mt-4 text-center text-[#ff2a6d] font-mono text-sm">{msg}</p>}
+        {msg && <p className="mt-4 text-center text-[#e11d3f] font-mono text-sm">{msg}</p>}
         <p className="text-center text-[#a0a0b0] mt-6 text-sm">
-          No access? <Link href="/register" className="text-[#00f5ff] hover:underline">Request Entry</Link>
+          No access? <Link href="/register" className="text-[#e11d3f] hover:underline">Request Entry</Link>
         </p>
       </div>
     </div>

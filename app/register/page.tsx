@@ -56,8 +56,8 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4">
       <div className="card-dark w-full max-w-md">
         <h2 className="text-3xl font-bold text-center mb-2">
-          <span className="text-[#00f5ff]">SAMMY</span>
-          <span className="text-[#b829dd]">STORE</span>
+          <span className="text-[#e11d3f]">SAMMY</span>
+          <span className="text-[#8c0018]">STORE</span>
         </h2>
         <p className="text-center text-[#a0a0b0] mb-8 font-mono text-sm">
           {`> NEW USER REGISTRATION`}
@@ -65,7 +65,7 @@ export default function RegisterPage() {
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-[#00f5ff] text-sm font-mono mb-2">
+            <label className="block text-[#e11d3f] text-sm font-mono mb-2">
               {`> ALIAS (NAME)`}
             </label>
             <input 
@@ -78,7 +78,7 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-[#00f5ff] text-sm font-mono mb-2">
+            <label className="block text-[#e11d3f] text-sm font-mono mb-2">
               {`> EMAIL_ADDRESS`}
             </label>
             <input 
@@ -91,7 +91,7 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-[#00f5ff] text-sm font-mono mb-2">
+            <label className="block text-[#e11d3f] text-sm font-mono mb-2">
               {`> PASSWORD`}
             </label>
             <input 
@@ -114,7 +114,7 @@ export default function RegisterPage() {
         
         {msg && (
           <p className={`mt-4 text-center font-mono text-sm ${
-            msg.includes('created') ? 'text-[#00ff88]' : 'text-[#ff2a6d]'
+            msg.includes('created') ? 'text-[#25d366]' : 'text-[#e11d3f]'
           }`}>
             {msg}
           </p>
@@ -122,7 +122,7 @@ export default function RegisterPage() {
         
         <p className="text-center text-[#a0a0b0] mt-6 text-sm">
           Already have access?{' '}
-          <Link href="/login" className="text-[#00f5ff] hover:underline">
+          <Link href="/login" className="text-[#e11d3f] hover:underline">
             Login Here
           </Link>
         </p>

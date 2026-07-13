@@ -37,9 +37,9 @@ export default function ThemeToggle() {
       aria-label="Toggle theme"
     >
       {isDark ? (
-        <span className="text-[#ffd700] text-xl">☀️</span>
+        <span className="text-[#e6a817] text-xl">☀️</span>
       ) : (
-        <span className="text-[#00f5ff] text-xl"></span>
+        <span className="text-[#e11d3f] text-xl"></span>
       )}
     </button>
   );
