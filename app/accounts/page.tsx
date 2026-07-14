@@ -56,6 +56,9 @@ export default function AccountsPage() {
           <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#f97316] mb-4 transition-colors">
             ← Back to Dashboard
           </Link>
+          <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#f97316] mb-4 transition-colors">
+            ← Back to Dashboard
+          </Link>
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Buy Accounts</h1>
             <p className="text-gray-600">Premium verified accounts for all platforms</p>
@@ -85,7 +88,9 @@ export default function AccountsPage() {
                 <Link
                   key={product.id}
                   href={`/accounts/${product.id}`}
-                  className="card p-6 cursor-pointer transition-all border-2 border-transparent hover:border-[#f97316] block"
+                  className={`card p-6 cursor-pointer transition-all border-2 border-transparent hover:border-[#f97316] block relative ${
+                    product.stock === 0 ? 'opacity-60' : ''
+                  }`}
                 >
                   {product.category && (
                     <span className="inline-block text-xs font-semibold text-[#f97316] bg-primary-50 px-2 py-1 rounded-full mb-2">
@@ -98,9 +103,13 @@ export default function AccountsPage() {
                   <p className="text-2xl font-bold text-[#f97316] mb-2">
                     ₦{parseFloat(product.price || '0').toLocaleString()}
                   </p>
-                  <p className="text-sm text-gray-600">
-                    {product.stock || 'In Stock'} available
-                  </p>
+                  {product.stock === 0 ? (
+                    <p className="text-sm font-semibold text-red-600">Out of Stock</p>
+                  ) : product.stock !== null && product.stock !== undefined ? (
+                    <p className="text-sm text-gray-600">{product.stock.toLocaleString()} available</p>
+                  ) : (
+                    <p className="text-sm text-gray-400">Stock unknown</p>
+                  )}
                 </Link>
               ))}
             </div>

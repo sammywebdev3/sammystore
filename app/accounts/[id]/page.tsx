@@ -43,7 +43,13 @@ export default function AccountDetailPage() {
     fetchProduct();
   }, [productId]);
 
-  const maxQty = product?.stock && !isNaN(parseInt(product.stock)) ? parseInt(product.stock) : undefined;
+  // product.stock is already a normalized number (or null if unknown) from
+  // the products API - checking `!== null && !== undefined` instead of a
+  // truthy check is what makes a real 0 (out of stock) distinguishable
+  // from "stock unknown", since 0 is falsy in JS.
+  const hasStockInfo = product?.stock !== null && product?.stock !== undefined;
+  const outOfStock = hasStockInfo && product.stock === 0;
+  const maxQty = hasStockInfo ? product.stock : undefined;
   const unitPrice = product ? parseFloat(product.price || '0') : 0;
   const totalPrice = unitPrice * quantity;
 
@@ -153,7 +159,13 @@ export default function AccountDetailPage() {
             <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
               {product.name || product.title}
             </h1>
-            <p className="text-gray-600">{product.stock || 'In Stock'} available</p>
+            {outOfStock ? (
+              <p className="text-red-600 font-semibold">Out of Stock</p>
+            ) : hasStockInfo ? (
+              <p className="text-gray-600">{product.stock.toLocaleString()} available</p>
+            ) : (
+              <p className="text-gray-400">Stock unknown</p>
+            )}
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -218,22 +230,28 @@ export default function AccountDetailPage() {
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={handleAddToCart}
-                  disabled={addingToCart}
-                  className="btn-secondary flex-1 disabled:opacity-50"
-                >
-                  {addingToCart ? 'Adding...' : 'Add to Cart'}
-                </button>
-                <button
-                  onClick={handleBuy}
-                  disabled={buying}
-                  className="btn-primary flex-1 disabled:opacity-50"
-                >
-                  {buying ? 'Processing...' : 'Purchase Now'}
-                </button>
-              </div>
+              {outOfStock ? (
+                <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-semibold text-center">
+                  This product is currently out of stock
+                </div>
+              ) : (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleAddToCart}
+                    disabled={addingToCart}
+                    className="btn-secondary flex-1 disabled:opacity-50"
+                  >
+                    {addingToCart ? 'Adding...' : 'Add to Cart'}
+                  </button>
+                  <button
+                    onClick={handleBuy}
+                    disabled={buying}
+                    className="btn-primary flex-1 disabled:opacity-50"
+                  >
+                    {buying ? 'Processing...' : 'Purchase Now'}
+                  </button>
+                </div>
+              )}
 
               {cartMsg && (
                 <div className="mt-3 p-3 rounded-lg bg-primary-50 text-[#f97316] text-sm font-semibold">

@@ -9,9 +9,23 @@ function pickVideo(obj: any): string | null {
   if (!obj) return null;
   return obj.video || obj.video_url || obj.tutorial_url || obj.tutorial_video || obj.youtube_url || null;
 }
+function pickStock(obj: any): number | null {
+  if (!obj) return null;
+  // DaNotp's field name for available quantity isn't confirmed (their docs
+  // are behind a login), so check every common variant. Returns null - not
+  // 0 - when no stock field is present at all, so "genuinely unknown" is
+  // never confused with "confirmed zero/out of stock".
+  const candidates = [obj.stock, obj.quantity, obj.qty, obj.available, obj.count, obj.inventory];
+  for (const c of candidates) {
+    if (c === undefined || c === null || c === '') continue;
+    const n = parseInt(String(c), 10);
+    if (!isNaN(n)) return n;
+  }
+  return null;
+}
 
 export async function GET() {
-  const apiKey = process.env.BENOTP_API_KEY;
+  const apiKey = process.env.YOUR_DANOTP_API_KEY;
 
   if (!apiKey) {
     return NextResponse.json({
@@ -22,7 +36,7 @@ export async function GET() {
   }
 
   try {
-    const url = `https://www.benotp.com/stubs/buy-accounts.php?action=getProducts&api_key=${apiKey}`;
+    const url = `https://www.danotp.com.ng/stubs/buy-accounts.php?action=getProducts&api_key=${apiKey}`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -65,6 +79,7 @@ export async function GET() {
                 category: category.name,
                 instructions: pickInstructions(product) || pickInstructions(category),
                 video: pickVideo(product) || pickVideo(category),
+                stock: pickStock(product),
               });
             });
           }
@@ -75,6 +90,7 @@ export async function GET() {
           ...p,
           instructions: pickInstructions(p),
           video: pickVideo(p),
+          stock: pickStock(p),
         }));
       }
       else if (data.product && typeof data.product === 'object') {
@@ -82,6 +98,7 @@ export async function GET() {
           ...data.product,
           instructions: pickInstructions(data.product),
           video: pickVideo(data.product),
+          stock: pickStock(data.product),
         }];
       }
     }

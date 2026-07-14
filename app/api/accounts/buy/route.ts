@@ -6,6 +6,17 @@ import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import { getMarkups, computeMarkup } from '@/lib/pricing';
 
+function pickStock(obj: any): number | null {
+  if (!obj) return null;
+  const candidates = [obj.stock, obj.quantity, obj.qty, obj.available, obj.count, obj.inventory];
+  for (const c of candidates) {
+    if (c === undefined || c === null || c === '') continue;
+    const n = parseInt(String(c), 10);
+    if (!isNaN(n)) return n;
+  }
+  return null;
+}
+
 function extractProducts(data: any): any[] {
   if (Array.isArray(data)) return data;
   if (data && typeof data === 'object') {
@@ -42,6 +53,20 @@ export async function POST(request: Request) {
 
     if (!product) {
       return NextResponse.json({ success: false, error: 'Product not found' }, { status: 400 });
+    }
+
+    // Check stock BEFORE touching the wallet - stock === 0 means confirmed
+    // out of stock; null means the provider didn't report a stock field at
+    // all, which is treated as "unknown" rather than blocking the sale.
+    const stock = pickStock(product);
+    if (stock !== null && stock <= 0) {
+      return NextResponse.json({ success: false, error: 'This product is out of stock' }, { status: 400 });
+    }
+    if (stock !== null && qty > stock) {
+      return NextResponse.json(
+        { success: false, error: `Only ${stock} available - please lower the quantity` },
+        { status: 400 }
+      );
     }
 
     const baseUnitPrice = parseFloat(String(product.price));
@@ -94,9 +119,16 @@ export async function POST(request: Request) {
         newBalance: debited.walletBalance,
         orderId: String(txn._id)
       });
-    } catch (providerError) {
+    } catch (providerError: any) {
       await User.findByIdAndUpdate(userId, { $inc: { walletBalance: cost } });
-      return NextResponse.json({ success: false, error: 'Purchase failed' }, { status: 400 });
+      // Show the real reason (e.g. "Insufficient balance", "Out of stock")
+      // instead of a generic message - the person needs to know why it
+      // failed, and that they've been refunded.
+      const reason = providerError?.message || 'Purchase failed';
+      return NextResponse.json(
+        { success: false, error: `${reason} - your wallet has been refunded.` },
+        { status: 400 }
+      );
     }
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message || 'Server error' }, { status: 500 });
