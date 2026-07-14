@@ -34,6 +34,7 @@ export default function VirtualNumbersPage() {
   const [loading, setLoading] = useState(true);
   const [loadingServices, setLoadingServices] = useState(false);
   const [buyingNumber, setBuyingNumber] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [checkingSms, setCheckingSms] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -165,6 +166,45 @@ export default function VirtualNumbersPage() {
       setError('Network error: ' + err.message);
     } finally {
       setBuyingNumber(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!order) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please login first');
+      router.push('/login');
+      return;
+    }
+
+    try {
+      setCancelling(true);
+      setError('');
+
+      const res = await fetch('/api/numbers/tiger/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ activationId: order.id })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+        smsPollActiveRef.current = false;
+        setWalletBalance(prev => prev + (data.refunded || 0));
+        setSuccess('Number cancelled and refunded to your wallet.');
+        setOrder(null);
+      } else {
+        setError(data.error || 'Failed to cancel number');
+      }
+    } catch (err: any) {
+      setError('Network error: ' + err.message);
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -388,6 +428,16 @@ export default function VirtualNumbersPage() {
                   <p className="text-blue-200">Waiting for SMS code...</p>
                 </div>
               </div>
+            )}
+
+            {!order.sms && (
+              <button
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="w-full bg-red-900 hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed border border-red-700 text-red-100 font-semibold py-2 px-4 rounded-lg transition-colors mb-3"
+              >
+                {cancelling ? 'Cancelling...' : 'Cancel & Refund'}
+              </button>
             )}
 
             <button
