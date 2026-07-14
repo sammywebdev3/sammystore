@@ -2,7 +2,6 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -42,10 +41,10 @@ export default function Navbar() {
   }, [pathname]);
 
   return (
-    <nav className="w-full bg-[#0f0f16] border-b border-[#2a2a3a] p-4 flex justify-between items-center sticky top-0 z-50">
-      <Link href="/dashboard" className="text-2xl font-bold font-mono">
-        <span className="text-[#e11d3f]">SAMMY</span>
-        <span className="text-[#8c0018]">STORE</span>
+    <nav className="w-full bg-white border-b border-gray-200 p-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
+      <Link href="/dashboard" className="text-2xl font-bold">
+        <span className="text-gray-800">SAMMY</span>
+        <span className="text-[#f97316]">STORE</span>
       </Link>
 
       <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-sm mx-4">
@@ -54,14 +53,14 @@ export default function Navbar() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search accounts & SMM services..."
-          className="w-full px-3 py-1.5 rounded-lg bg-[#1a1a25] border border-[#2a2a3a] text-sm text-[#e0e0e0] placeholder-[#5a5a6a] focus:outline-none focus:border-[#e11d3f]/50 transition-colors"
+          className="w-full px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#f97316]/50 transition-colors"
         />
       </form>
 
       <div className="flex items-center gap-4">
         <Link
           href="/search"
-          className="md:hidden p-2 rounded-lg hover:bg-[#1a1a25] transition-colors"
+          className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
           aria-label="Search"
         >
           <span className="text-xl">🔍</span>
@@ -69,29 +68,28 @@ export default function Navbar() {
         {balance !== null && (
           <Link
             href="/fund"
-            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#1a1a25] border border-[#2a2a3a] text-sm font-mono hover:border-[#e11d3f]/50 transition-colors"
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-50 border border-gray-200 text-sm hover:border-[#f97316]/50 transition-colors"
           >
-            <span className="text-[#a0a0b0]">Wallet</span>
-            <span className="text-[#e11d3f] font-bold">₦{balance.toLocaleString()}</span>
+            <span className="text-gray-500">Wallet</span>
+            <span className="text-[#f97316] font-bold">₦{balance.toLocaleString()}</span>
           </Link>
         )}
         <Link
           href="/cart"
-          className="relative p-2 rounded-lg hover:bg-[#1a1a25] transition-colors"
+          className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
           aria-label="Cart"
         >
           <span className="text-xl">🛒</span>
           {cartCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-[#e11d3f] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 bg-[#f97316] text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
               {cartCount > 9 ? '9+' : cartCount}
             </span>
           )}
         </Link>
-        <ThemeToggle />
         <Link
           href="/dashboard"
-          className={`text-sm font-mono transition-colors ${
-            pathname === '/dashboard' ? 'text-[#e11d3f]' : 'text-[#a0a0b0] hover:text-[#e11d3f]'
+          className={`text-sm font-semibold transition-colors ${
+            pathname === '/dashboard' ? 'text-[#f97316]' : 'text-gray-500 hover:text-[#f97316]'
           }`}
         >
           DASHBOARD
