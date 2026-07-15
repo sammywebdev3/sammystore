@@ -15,7 +15,7 @@ function pickStock(obj: any): number | null {
   // are behind a login), so check every common variant. Returns null - not
   // 0 - when no stock field is present at all, so "genuinely unknown" is
   // never confused with "confirmed zero/out of stock".
-  const candidates = [obj.stock, obj.quantity, obj.qty, obj.available, obj.count, obj.inventory];
+  const candidates = [obj.stock, obj.quantity, obj.qty, obj.available, obj.count, obj.inventory, obj.amount];
   for (const c of candidates) {
     if (c === undefined || c === null || c === '') continue;
     const n = parseInt(String(c), 10);
