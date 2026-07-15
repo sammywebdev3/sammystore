@@ -8,6 +8,7 @@ export default function AccountsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [inStockOnly, setInStockOnly] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -32,9 +33,15 @@ export default function AccountsPage() {
   }, [products]);
 
   const visibleProducts = useMemo(() => {
-    if (selectedCategory === 'All') return products;
-    return products.filter((p) => (p.category || 'Other') === selectedCategory);
-  }, [products, selectedCategory]);
+    let list = products;
+    if (selectedCategory !== 'All') {
+      list = list.filter((p) => (p.category || 'Other') === selectedCategory);
+    }
+    if (inStockOnly) {
+      list = list.filter((p) => p.stock === null || p.stock === undefined || p.stock > 0);
+    }
+    return list;
+  }, [products, selectedCategory, inStockOnly]);
 
   if (loading) {
     return (
@@ -56,15 +63,12 @@ export default function AccountsPage() {
           <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#f97316] mb-4 transition-colors">
             ← Back to Dashboard
           </Link>
-          <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-[#f97316] mb-4 transition-colors">
-            ← Back to Dashboard
-          </Link>
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Buy Accounts</h1>
             <p className="text-gray-600">Premium verified accounts for all platforms</p>
           </div>
 
-          <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex flex-wrap gap-2 mb-4">
             {categories.map((category) => (
               <button
                 key={category}
@@ -80,8 +84,31 @@ export default function AccountsPage() {
             ))}
           </div>
 
+          <div className="flex flex-wrap items-center gap-4 mb-6">
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={inStockOnly}
+                onChange={(e) => setInStockOnly(e.target.checked)}
+                className="w-4 h-4 accent-[#f97316]"
+              />
+              Show only in-stock products
+            </label>
+            {(selectedCategory !== 'All' || inStockOnly) && (
+              <button
+                onClick={() => {
+                  setSelectedCategory('All');
+                  setInStockOnly(false);
+                }}
+                className="text-sm font-semibold text-gray-500 hover:text-[#f97316] transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+
           {visibleProducts.length === 0 ? (
-            <p className="text-gray-600 mb-8">No products in this category.</p>
+            <p className="text-gray-600 mb-8">No products match the selected filters.</p>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {visibleProducts.map((product) => (
@@ -92,11 +119,18 @@ export default function AccountsPage() {
                     product.stock === 0 ? 'opacity-60' : ''
                   }`}
                 >
-                  {product.category && (
-                    <span className="inline-block text-xs font-semibold text-[#f97316] bg-primary-50 px-2 py-1 rounded-full mb-2">
-                      {product.category}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    {product.category && (
+                      <span className="inline-block text-xs font-semibold text-[#f97316] bg-primary-50 px-2 py-1 rounded-full">
+                        {product.category}
+                      </span>
+                    )}
+                    {product.source === 'local' && (
+                      <span className="inline-block text-xs font-semibold text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                        IN HOUSE
+                      </span>
+                    )}
+                  </div>
                   <h3 className="text-lg font-bold text-gray-800 mb-2">
                     {product.name || product.title}
                   </h3>
