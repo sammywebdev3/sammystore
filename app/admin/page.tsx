@@ -214,7 +214,7 @@ export default function AdminPage() {
           </h1>
           <p className="text-gray-500 font-mono mt-2">{`> SYSTEM_CONTROL_CENTER`}</p>
         </div>
-        <Link href="/dashboard" className="px-6 py-3 bg-gradient-to-r from-[#fb923c] to-[#f97316] rounded-lg font-bold text-black hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all">
+        <div className="flex gap-3"><Link href="/admin/catalog" className="px-6 py-3 bg-white border-2 border-[#f97316] rounded-lg font-bold text-[#f97316] hover:bg-orange-50 transition-all">{`> MY_CATALOG`}</Link><Link href="/dashboard" className="px-6 py-3 bg-gradient-to-r from-[#fb923c] to-[#f97316] rounded-lg font-bold text-black hover:shadow-[0_0_20px_rgba(249,115,22,0.4)] transition-all">
           {`> EXIT_TO_SITE`}
         </Link>
       </div>

@@ -151,6 +151,14 @@ export default function Home() {
               <p className="text-gray-600 text-sm">Premium pre-verified accounts</p>
             </Link>
 
+            <Link href="/catalog" className="card p-6 text-center group">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <span className="text-white text-3xl">🏷️</span>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">My Catalog</h3>
+              <p className="text-gray-600 text-sm">Sold directly by SammyStore</p>
+            </Link>
+
             <Link href="/fund" className="card p-6 text-center group">
               <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-primary-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                 <span className="text-white text-3xl">💳</span>
