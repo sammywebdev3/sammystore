@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 
-type Tab = 'all' | 'numbers' | 'smm' | 'accounts';
+type Tab = 'all' | 'numbers' | 'smm' | 'accounts' | 'catalog';
 
 export default function ServicesCatalogPage() {
   const [tab, setTab] = useState<Tab>('all');
@@ -68,6 +68,7 @@ export default function ServicesCatalogPage() {
     { key: 'numbers', label: 'Virtual Numbers' },
     { key: 'smm', label: 'SMM' },
     { key: 'accounts', label: 'Accounts' },
+    { key: 'catalog', label: 'My Catalog' },
   ];
 
   return (
@@ -211,7 +212,25 @@ export default function ServicesCatalogPage() {
               )}
             </section>
           )}
-        </main>
+        {(tab === 'all' || tab === 'catalog') && (
+              <section className="mb-10">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-gray-800">My Catalog</h2>
+                  <Link href="/catalog" className="text-[#f97316] text-sm font-semibold">
+                    Open &rarr;
+                  </Link>
+                </div>
+                <div className="card p-6">
+                  <p className="text-gray-600 text-sm mb-4">
+                    Accounts sold directly by SammyStore &mdash; instant delivery from our own stock.
+                  </p>
+                  <Link href="/catalog" className="btn-primary inline-block">
+                    Browse My Catalog &rarr;
+                  </Link>
+                </div>
+              </section>
+            )}
+          </main>
       </div>
     </div>
   );
