@@ -298,12 +298,36 @@ export async function cancelActivation(activationId: string) {
     id: activationId,
     status: 8
   });
-  
-  if (typeof data === 'string' && data === '1') {
-    return { success: true };
+
+  // v1 setStatus returns a bare "1" string on success. This is a V2
+  // endpoint though, and (like getNumberV2/getStatusV2 elsewhere in this
+  // file) actually responds with JSON instead - the old string-only check
+  // meant every real success still fell through to the error branch below,
+  // and since `data` was an object, the template literal rendered it as
+  // the useless "[object Object]" seen in logs/UI instead of anything
+  // diagnosable. Accept both shapes and stringify properly on failure.
+  if (typeof data === 'string') {
+    if (data === '1' || data.toUpperCase() === 'ACCESS_CANCEL') {
+      return { success: true };
+    }
+    throw new Error(`Failed to cancel activation: ${data}`);
   }
-  
-  throw new Error(`Failed to cancel activation: ${data}`);
+
+  if (data && typeof data === 'object') {
+    const looksSuccessful =
+      data.success === true ||
+      data.status === 'success' ||
+      data.status === 'ok' ||
+      data.status === 1 ||
+      String(data.status).toUpperCase() === 'ACCESS_CANCEL';
+
+    if (looksSuccessful) {
+      return { success: true };
+    }
+    throw new Error(`Failed to cancel activation: ${JSON.stringify(data)}`);
+  }
+
+  throw new Error(`Failed to cancel activation: ${JSON.stringify(data)}`);
 }
 
 export async function getServicesList(countryCode: string = 'US') {

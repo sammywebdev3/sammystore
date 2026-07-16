@@ -82,9 +82,13 @@ async function handleAccszonePurchase(productId: string, qty: number, coupon: st
     });
   } catch (providerError: any) {
     await User.findByIdAndUpdate(userId, { $inc: { walletBalance: cost } });
-    const reason = providerError?.message || 'Purchase failed';
+    // Log the real provider error server-side for the admin to act on (e.g.
+    // AccsZone reseller balance running out) - but never show the customer
+    // the raw message, since it can contain our USD supplier cost/balance,
+    // not anything about their own NGN wallet.
+    console.error('AccsZone purchase failed:', providerError?.message || providerError);
     return NextResponse.json(
-      { success: false, error: `${reason} - your wallet has been refunded.` },
+      { success: false, error: 'This item could not be delivered right now - your wallet has been refunded.' },
       { status: 400 }
     );
   }
