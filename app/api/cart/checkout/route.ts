@@ -116,7 +116,12 @@ export async function POST(request: Request) {
               productName: item.name,
               category: item.category || null,
               quantity: item.quantity,
-              accountData: { Accounts: purchaseResult.accounts.join('\n') },
+              // One entry per account, not a single joined blob - see
+              // matching note in api/accounts/buy/route.ts.
+              accountData:
+                purchaseResult.accounts.length === 1
+                  ? { Account: purchaseResult.accounts[0] }
+                  : Object.fromEntries(purchaseResult.accounts.map((acc, i) => [`Account ${i + 1}`, acc])),
             },
           });
         } catch (txError) {

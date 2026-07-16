@@ -48,7 +48,14 @@ async function handleAccszonePurchase(productId: string, qty: number, coupon: st
   try {
     const result = await purchaseListing(rawId, qty, coupon || undefined);
 
-    const accountData = { Accounts: result.accounts.join('\n') };
+    // One entry per account purchased - not a single newline-joined blob -
+    // so a multi-quantity order shows each account in its own labeled,
+    // individually-copyable box on the Orders page instead of everything
+    // mashed together under one "Accounts" field.
+    const accountData =
+      result.accounts.length === 1
+        ? { Account: result.accounts[0] }
+        : Object.fromEntries(result.accounts.map((acc, i) => [`Account ${i + 1}`, acc]));
 
     const txn = await Transaction.create({
       userId,
