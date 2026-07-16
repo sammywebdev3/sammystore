@@ -199,11 +199,20 @@ export async function buyNumber(countryId: string, serviceCode: string) {
   // issued a number. `getNumberV2` is the JSON-native equivalent and
   // returns {activationId, phoneNumber, ...} on success while still
   // returning the same bare error tokens as plain text on failure.
+  // NOTE: fixedPrice was previously set to 'true', which tells TigerSMS to
+  // reject the purchase outright if its real-time price has moved even
+  // slightly since our getPrices() call a moment earlier - rather than just
+  // charging the current price. For most services this window is harmless
+  // since prices barely move, but WhatsApp is by far the most contested
+  // service on this API (every reseller's customers are drawing from the
+  // same number pool), so its price/stock can shift within the same
+  // request cycle. That made fixedPrice reject WhatsApp purchases far more
+  // often than any other service - this is why WhatsApp specifically kept
+  // failing. Omitting it lets TigerSMS fulfill at its actual current price.
   const data = await tigerRequest('getNumberV2', {
     country: countryId,
     service: serviceCode,
-    activationType: 'SMS',
-    fixedPrice: 'true'
+    activationType: 'SMS'
   });
 
   if (typeof data === 'string') {
@@ -234,7 +243,11 @@ export async function buyNumber(countryId: string, serviceCode: string) {
   return {
     id: String(id),
     number: String(number),
-    server: data.server
+    server: data.server,
+    // Actual provider-side cost, now that fixedPrice no longer forces an
+    // exact match to our quoted price - useful for spotting drift, not
+    // used to change what the customer is charged.
+    providerCost: data.activationCost !== undefined ? parseFloat(data.activationCost) : null
   };
 }
 

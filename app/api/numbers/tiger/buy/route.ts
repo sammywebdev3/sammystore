@@ -89,6 +89,14 @@ export async function POST(request: Request) {
     let order;
     try {
       order = await buyNumber(country, service);
+      // fixedPrice is no longer enforced (see lib/tigerSms.ts), so log any
+      // meaningful drift between what we quoted/charged and what TigerSMS
+      // actually billed, purely for monitoring - doesn't affect the user.
+      if (order.providerCost !== null && Math.abs(order.providerCost - selectedService.price) > 0.01) {
+        console.warn(
+          `[TigerSMS] Price drift on ${service}/${country}: quoted ${selectedService.price}, provider charged ${order.providerCost}`
+        );
+      }
     } catch (buyError: any) {
       await User.findByIdAndUpdate(userId, { $inc: { walletBalance: priceNgn } });
       return NextResponse.json(
