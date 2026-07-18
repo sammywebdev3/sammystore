@@ -12,7 +12,12 @@ export type BenotpPool = 'usa1' | 'usa2' | 'all1' | 'all2';
 
 const POOL_CONFIG: Record<BenotpPool, { baseUrl: string; label: string }> = {
   usa1: { baseUrl: 'https://benotp.com/stubs/handler_api.php', label: 'USA Server 1' },
-  usa2: { baseUrl: 'https://benotp.com/stubs/sms.php', label: 'USA Server 2' },
+  // Confirmed live on 2026-07-18 - the real usa2 endpoint is this bare
+  // 'usa_server_2' path (no .php), not 'sms.php'. sms.php was a wrong
+  // guess that had been silently returning something else this whole time -
+  // that's the actual root cause of the "only one service" bug, not a
+  // parsing issue in getUsa2Services (see the rewritten parser below).
+  usa2: { baseUrl: 'https://benotp.com/stubs/usa_server_2', label: 'USA Server 2' },
   all1: { baseUrl: 'https://benotp.com/stubs/handler.php', label: 'All Countries 1' },
   all2: { baseUrl: 'https://benotp.com/stubs/all_server_2.php', label: 'All Countries 2' },
 };
@@ -160,23 +165,33 @@ async function getUsa1Services(): Promise<BenotpService[]> {
   }));
 }
 
-// usa2 (sms.php) getServices: wrapped in {status, services}, field names
-// differ from usa1 (service_name instead of name), and it additionally
-// exposes `available`/`ltr_available` booleans that usa1 does not.
-// Confirmed via a real getServices call on 2026-07-18.
+// usa2 (usa_server_2) getServices: confirmed live on 2026-07-18 via a real
+// browser call - this is the SAME flat, unwrapped object-keyed-by-code shape
+// as usa1's getServices, e.g. { "7eleven": { "name": "7-Eleven", "price":
+// "245.35", "original_price": "245.35", "ltr_price": null, "repeatable":
+// true, "discount_applied": "0%", "discount_amount": "0.00" }, ... } - NOT
+// wrapped in {status, services} and there's no service_id/service_name/
+// available fields. That previous shape was never actually verified against
+// a live response, and combined with hitting the wrong endpoint (sms.php
+// instead of the real usa_server_2 path - see POOL_CONFIG above), it's why
+// this pool was showing only one garbled service before.
 async function getUsa2Services(): Promise<BenotpService[]> {
   const data = await benotpRequest('usa2', { action: 'getServices' });
   if (typeof data === 'string') {
     throw new Error(`BenOTP (${poolLabel('usa2')}) getServices error: ${data}`);
   }
-  if (!data || typeof data !== 'object' || data.status !== 'ok' || !data.services) {
+  if (!data || typeof data !== 'object') {
     throw new Error(`BenOTP (${poolLabel('usa2')}) returned an unrecognized getServices response`);
   }
-  return Object.entries(data.services as Record<string, any>).map(([code, s]) => ({
-    service: s?.service_id || code,
-    name: s?.service_name || code,
+  return Object.entries(data as Record<string, any>).map(([code, s]) => ({
+    service: code,
+    name: s?.name || code,
+    // price already has any account-level discount applied, same
+    // convention as usa1 - see discount_applied/discount_amount if we ever
+    // need to show the discount separately, but original_price is not the
+    // number to charge.
     price: parseFloat(s?.price) || 0,
-    available: typeof s?.available === 'boolean' ? s.available : null,
+    available: null, // not exposed by this endpoint, same as usa1
     repeatable: !!s?.repeatable,
   }));
 }
