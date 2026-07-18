@@ -1,10 +1,14 @@
+import Logo from '@/components/Logo';
+
 const TELEGRAM_URL = 'https://t.me/sammystorelogss';
 const WHATSAPP_CHANNEL_URL = 'https://whatsapp.com/channel/0029Vb8Zqpg4SpkOr8Ghme0w';
 
 export default function Footer() {
   return (
     <footer className="mt-auto border-t border-gray-200 bg-white">
-      <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col items-center gap-6">
+          <Logo variant="stacked" />
+          <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4">
         <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} SammyStore. All rights reserved.</p>
         <div className="flex items-center gap-4">
             <a
@@ -31,6 +35,7 @@ export default function Footer() {
           </a>
         </div>
       </div>
+          </div>
     </footer>
   );
 }

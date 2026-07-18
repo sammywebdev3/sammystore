@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Ticket from '@/models/Ticket';
 import { getUserId } from '@/lib/auth';
+import { sendTelegramMessage } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!ticket) {
     return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
   }
+    if (ticket.userUnread) {
+      ticket.userUnread = false;
+      await ticket.save();
+    }
   return NextResponse.json({ success: true, ticket });
 }
 

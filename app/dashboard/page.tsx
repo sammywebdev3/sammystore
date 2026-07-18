@@ -105,6 +105,7 @@ export default function DashboardPage() {
   const [activeNumbers, setActiveNumbers] = useState(0);
   const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
   const [recentNumbers, setRecentNumbers] = useState<RecentNumber[]>([]);
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -131,8 +132,19 @@ export default function DashboardPage() {
       }
     };
 
+    const fetchSupportUnread = async () => {
+      const res = await fetch('/api/support/tickets', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.tickets)) {
+        setSupportUnreadCount(data.tickets.filter((t: any) => t.userUnread).length);
+      }
+    };
+
     fetchBalance();
     fetchStats();
+    fetchSupportUnread();
   }, []);
 
   return (

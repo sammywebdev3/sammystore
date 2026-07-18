@@ -11,6 +11,8 @@ export interface ITicket extends Document {
   subject: string;
   status: 'open' | 'pending' | 'closed';
   messages: ITicketMessage[];
+  adminUnread: boolean;
+  userUnread: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +34,13 @@ const TicketSchema: Schema<ITicket> = new Schema(
     // "open" so admins can filter for what actually needs their attention.
     status: { type: String, enum: ['open', 'pending', 'closed'], default: 'pending' },
     messages: { type: [TicketMessageSchema], default: [] },
+    // adminUnread: true whenever the customer has sent something the admin
+    // hasn't seen yet (new ticket or new user reply). userUnread: true
+    // whenever the admin has replied and the customer hasn't opened the
+    // thread since. Kept separate from status since status also drives
+    // filtering/reporting and shouldn't double as a read receipt.
+    adminUnread: { type: Boolean, default: true },
+    userUnread: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

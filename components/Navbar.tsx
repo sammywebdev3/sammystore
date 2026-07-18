@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import Logo from '@/components/Logo';
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -43,12 +44,7 @@ export default function Navbar() {
   return (
     <nav className="w-full bg-white border-b border-gray-200 p-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
       <Link href="/dashboard" className="flex items-center gap-2 shrink-0" aria-label="SammyStore home">
-        <span className="w-9 h-9 rounded-xl bg-[#f97316] text-white font-extrabold flex items-center justify-center text-lg shadow-sm">
-          S
-        </span>
-        <span className="hidden sm:inline text-2xl font-bold">
-          <span className="text-gray-800">SAMMY</span><span className="text-[#f97316]">STORE</span>
-        </span>
+        <Logo />
       </Link>
 
       <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-sm mx-4">

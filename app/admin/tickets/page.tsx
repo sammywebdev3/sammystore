@@ -17,6 +17,7 @@ interface Ticket {
   createdAt: string;
   updatedAt: string;
   userId: { _id: string; name: string; email: string } | string;
+  adminUnread?: boolean;
 }
 
 const STATUS_LABEL: Record<Ticket['status'], string> = {
@@ -193,7 +194,14 @@ export default function AdminTicketsPage() {
   return (
     <div className="max-w-3xl mx-auto p-4 pt-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Support Tickets</h1>
+        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            Support Tickets
+            {tickets.some((t) => t.adminUnread) && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-500 text-white">
+                {tickets.filter((t) => t.adminUnread).length} new
+              </span>
+            )}
+          </h1>
         <Link href="/admin" className="text-sm text-gray-500 hover:text-gray-800">
           ← Admin Home
         </Link>
@@ -229,10 +237,15 @@ export default function AdminTicketsPage() {
               onClick={() => openTicket(t._id)}
               className="w-full text-left bg-white border border-gray-200 rounded-xl p-4 hover:border-[#f97316] transition-colors flex items-center justify-between"
             >
-              <div>
+              <div className="flex items-center gap-2">
+                    {t.adminUnread && (
+                      <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" aria-label="Unread ticket" />
+                    )}
+                    <div>
                 <p className="font-semibold text-gray-800">{t.subject}</p>
                 <p className="text-xs text-gray-400 mt-1">{ownerLabel(t)} · {new Date(t.updatedAt).toLocaleString()}</p>
               </div>
+                  </div>
               <span className={`text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap ${STATUS_COLOR[t.status]}`}>
                 {STATUS_LABEL[t.status]}
               </span>

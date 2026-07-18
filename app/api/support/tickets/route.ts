@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Ticket from '@/models/Ticket';
 import { getUserId } from '@/lib/auth';
+import { sendTelegramMessage } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +39,11 @@ export async function POST(request: Request) {
       status: 'pending',
       messages: [{ sender: 'user', message: message.trim() }],
     });
+
+    sendTelegramMessage(
+      `🆕 <b>New support ticket</b>\n<b>Subject:</b> ${subject.trim()}\n<b>Message:</b> ${message.trim().slice(0, 300)}`
+    );
+
     return NextResponse.json({ success: true, ticket });
   } catch (e: any) {
     console.error('Create ticket error:', e);

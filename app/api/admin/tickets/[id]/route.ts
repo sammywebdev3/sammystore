@@ -18,6 +18,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   if (!ticket) {
     return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
   }
+    if (ticket.adminUnread) {
+      ticket.adminUnread = false;
+      await ticket.save();
+    }
   return NextResponse.json({ success: true, ticket });
 }
 
@@ -41,6 +45,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   if (message?.trim()) {
     ticket.messages.push({ sender: 'admin', message: message.trim(), createdAt: new Date() });
+      ticket.userUnread = true;
   }
 
   if (status && ['open', 'pending', 'closed'].includes(status)) {

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Logo from '@/components/Logo';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -37,9 +38,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="card w-full max-w-md p-8">
-        <h2 className="text-3xl font-bold text-center mb-2">
-          <span className="text-gray-800">SAMMY</span><span className="text-[#f97316]">STORE</span>
-        </h2>
+        <div className="flex justify-center mb-2">
+            <Logo variant="stacked" />
+          </div>
         <p className="text-center text-gray-500 mb-8 text-sm">Log in to your account</p>
 
         <form onSubmit={handleLogin} className="space-y-5">
