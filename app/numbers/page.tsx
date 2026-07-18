@@ -57,6 +57,17 @@ export default function VirtualNumbersPage() {
   const [benotpCountry, setBenotpCountry] = useState('');
   const [benotpAreaCode, setBenotpAreaCode] = useState('');
   const [benotpCarrier, setBenotpCarrier] = useState('');
+  // Live catalog for usa1/usa2 (browsable) - all1 has no bulk listing
+  // action, so it uses a one-off "check price" quote instead (see below).
+  // all2 stays on flat admin-set pricing until its getPrices response is
+  // fixed on BenOTP's side - see notes in lib/benotp.ts.
+  const [benotpServices, setBenotpServices] = useState<
+    { service: string; name: string; priceNgn: number; available: boolean | null }[]
+  >([]);
+  const [benotpServicesLoading, setBenotpServicesLoading] = useState(false);
+  const [benotpServicesError, setBenotpServicesError] = useState('');
+  const [benotpQuote, setBenotpQuote] = useState<{ priceNgn: number; count: number } | null>(null);
+  const [benotpQuoteLoading, setBenotpQuoteLoading] = useState(false);
   const [benotpBuying, setBenotpBuying] = useState(false);
   const [benotpCancelling, setBenotpCancelling] = useState(false);
   const [benotpError, setBenotpError] = useState('');
@@ -135,6 +146,74 @@ export default function VirtualNumbersPage() {
 
     loadServices();
   }, [selectedCountry]);
+
+  // Live BenOTP catalog for usa1/usa2 - reload whenever the chosen server
+  // changes. all1/all2 don't get a bulk list here (see benotpQuote below).
+  useEffect(() => {
+    if (provider !== 'benotp' || (benotpPool !== 'usa1' && benotpPool !== 'usa2')) {
+      setBenotpServices([]);
+      return;
+    }
+
+    const loadBenotpServices = async () => {
+      try {
+        setBenotpServicesLoading(true);
+        setBenotpServicesError('');
+        setBenotpService('');
+
+        const res = await fetch(`/api/numbers/benotp/services?pool=${benotpPool}`);
+        const data = await res.json();
+
+        if (data.success && Array.isArray(data.services)) {
+          setBenotpServices(data.services);
+        } else {
+          setBenotpServicesError(data.error || 'Failed to load services');
+          setBenotpServices([]);
+        }
+      } catch (err: any) {
+        setBenotpServicesError('Network error: ' + err.message);
+        setBenotpServices([]);
+      } finally {
+        setBenotpServicesLoading(false);
+      }
+    };
+
+    loadBenotpServices();
+  }, [provider, benotpPool]);
+
+  // all1 has no bulk catalog - price is looked up per service+country pair
+  // once the customer has entered both. Debounced slightly so we don't fire
+  // a request on every keystroke.
+  useEffect(() => {
+    setBenotpQuote(null);
+    if (benotpPool !== 'all1' || !benotpService.trim() || !benotpCountry.trim()) return;
+
+    const handle = setTimeout(async () => {
+      try {
+        setBenotpQuoteLoading(true);
+        const params = new URLSearchParams({
+          service: benotpService.trim(),
+          country: benotpCountry.trim(),
+        });
+        if (benotpAreaCode.trim()) params.set('areaCode', benotpAreaCode.trim());
+
+        const res = await fetch(`/api/numbers/benotp/price?${params.toString()}`);
+        const data = await res.json();
+
+        if (data.success) {
+          setBenotpQuote({ priceNgn: data.priceNgn, count: data.count });
+        } else {
+          setBenotpQuote(null);
+        }
+      } catch {
+        setBenotpQuote(null);
+      } finally {
+        setBenotpQuoteLoading(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(handle);
+  }, [benotpPool, benotpService, benotpCountry, benotpAreaCode]);
 
   const handleBuy = async () => {
     if (!selectedCountry || !selectedService) {
@@ -657,18 +736,45 @@ export default function VirtualNumbersPage() {
               <BenotpServerGrid selected={benotpPool} onSelect={setBenotpPool} />
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-300 mb-2">
-                2. Service Code (e.g. wa for WhatsApp, tg for Telegram)
-              </label>
-              <input
-                type="text"
-                value={benotpService}
-                onChange={(e) => setBenotpService(e.target.value)}
-                placeholder="wa"
-                className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-[#f97316] outline-none transition"
-              />
-            </div>
+            {(benotpPool === 'usa1' || benotpPool === 'usa2') ? (
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  2. Service {benotpServicesLoading && <span className="text-gray-500">(loading prices...)</span>}
+                </label>
+                {benotpServicesError && (
+                  <p className="text-sm text-red-400 mb-2">{benotpServicesError}</p>
+                )}
+                <select
+                  value={benotpService}
+                  onChange={(e) => setBenotpService(e.target.value)}
+                  disabled={benotpServicesLoading || benotpServices.length === 0}
+                  className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-[#f97316] outline-none transition disabled:opacity-50"
+                >
+                  <option value="">
+                    {benotpServicesLoading ? 'Loading services...' : 'Select a service'}
+                  </option>
+                  {benotpServices.map((s) => (
+                    <option key={s.service} value={s.service} disabled={s.available === false}>
+                      {s.name} - ₦{s.priceNgn.toLocaleString()}
+                      {s.available === false ? ' (out of stock)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-gray-300 mb-2">
+                  2. Service Code (e.g. wa for WhatsApp, tg for Telegram)
+                </label>
+                <input
+                  type="text"
+                  value={benotpService}
+                  onChange={(e) => setBenotpService(e.target.value)}
+                  placeholder="wa"
+                  className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-[#f97316] outline-none transition"
+                />
+              </div>
+            )}
 
             {(benotpPool === 'all1' || benotpPool === 'all2') && (
               <div className="mb-4">
@@ -680,6 +786,20 @@ export default function VirtualNumbersPage() {
                   placeholder="e.g. 0 for Russia, 1 for USA - see the country list"
                   className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-[#f97316] outline-none transition"
                 />
+              </div>
+            )}
+
+            {benotpPool === 'all1' && benotpService.trim() && benotpCountry.trim() && (
+              <div className="mb-4 p-3 rounded-lg bg-gray-700 border border-gray-600 text-sm">
+                {benotpQuoteLoading ? (
+                  <span className="text-gray-400">Checking live price...</span>
+                ) : benotpQuote ? (
+                  <span className="text-white font-semibold">
+                    ₦{benotpQuote.priceNgn.toLocaleString()} · {benotpQuote.count} available
+                  </span>
+                ) : (
+                  <span className="text-gray-400">No live price for this service/country combo yet</span>
+                )}
               </div>
             )}
 

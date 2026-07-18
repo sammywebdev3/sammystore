@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAllListings as getAccszoneListings, purchaseListing as purchaseAccszoneListing } from '@/lib/accszone';
+import { getAllProducts as getHstoraProducts, createOrder as createHstoraOrder } from '@/lib/hstora';
 import { japRequest } from '@/lib/jap';
 import { getUserId } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
@@ -7,6 +8,7 @@ import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import Cart from '@/models/Cart';
 import { getMarkups, computeMarkup, toNgn } from '@/lib/pricing';
+import crypto from 'crypto';
 
 type CheckoutResult = { productId: string; name: string; success: boolean; error?: string };
 
@@ -35,8 +37,9 @@ export async function POST(request: Request) {
 
   if (accountItems.length > 0) {
     const accszoneItems = accountItems.filter((i) => String(i.productId).startsWith('buyacc1_'));
+    const hstoraItems = accountItems.filter((i) => String(i.productId).startsWith('buyacc2_'));
     const unknownItems = accountItems.filter(
-      (i) => !String(i.productId).startsWith('buyacc1_')
+      (i) => !String(i.productId).startsWith('buyacc1_') && !String(i.productId).startsWith('buyacc2_')
     );
 
     for (const item of unknownItems) {
@@ -122,6 +125,94 @@ export async function POST(request: Request) {
                 purchaseResult.accounts.length === 1
                   ? { Account: purchaseResult.accounts[0] }
                   : Object.fromEntries(purchaseResult.accounts.map((acc, i) => [`Account ${i + 1}`, acc])),
+            },
+          });
+        } catch (txError) {
+          console.error('Failed to record account Transaction after successful purchase:', txError);
+        }
+
+        results.push({ productId: item.productId, name: item.name, success: true });
+      }
+    }
+
+    if (hstoraItems.length > 0) {
+      let liveProducts: any[] = [];
+      try {
+        liveProducts = await getHstoraProducts();
+      } catch {}
+
+      for (const item of hstoraItems) {
+        const rawId = String(item.productId).replace(/^buyacc2_/, '');
+        const liveProduct = liveProducts.find((p: any) => String(p.id) === String(rawId));
+
+        if (!liveProduct) {
+          results.push({ productId: item.productId, name: item.name, success: false, error: 'No longer available' });
+          remainingItems.push(item);
+          continue;
+        }
+
+        if (typeof liveProduct.stock_available === 'number' && item.quantity > liveProduct.stock_available) {
+          results.push({
+            productId: item.productId,
+            name: item.name,
+            success: false,
+            error: `Only ${liveProduct.stock_available} available`,
+          });
+          remainingItems.push(item);
+          continue;
+        }
+
+        const baseUnitPriceUsd = liveProduct.price;
+        if (isNaN(baseUnitPriceUsd) || baseUnitPriceUsd <= 0) {
+          results.push({ productId: item.productId, name: item.name, success: false, error: 'Invalid product price' });
+          remainingItems.push(item);
+          continue;
+        }
+
+        const unitPrice = computeMarkup(toNgn(baseUnitPriceUsd), markups.accounts);
+        const cost = unitPrice * item.quantity;
+
+        const debited = await User.findOneAndUpdate(
+          { _id: userId, walletBalance: { $gte: cost } },
+          { $inc: { walletBalance: -cost } },
+          { new: true }
+        );
+
+        if (!debited) {
+          results.push({ productId: item.productId, name: item.name, success: false, error: 'Insufficient funds' });
+          remainingItems.push(item);
+          continue;
+        }
+
+        let purchaseResult;
+        try {
+          const externalOrderId = `sammystore-${userId}-${crypto.randomUUID()}`;
+          purchaseResult = await createHstoraOrder(rawId, item.quantity, externalOrderId);
+        } catch {
+          await User.findByIdAndUpdate(userId, { $inc: { walletBalance: cost } });
+          results.push({ productId: item.productId, name: item.name, success: false, error: 'Purchase failed, refunded' });
+          remainingItems.push(item);
+          continue;
+        }
+
+        try {
+          const deliveredItems = purchaseResult.delivery?.items || [];
+          await Transaction.create({
+            userId,
+            type: 'account_purchase',
+            description: `Bought ${item.quantity} x ${item.name}`,
+            amount: cost,
+            status: 'success',
+            metadata: {
+              productId: item.productId,
+              source: 'buyacc2',
+              productName: item.name,
+              category: item.category || null,
+              quantity: item.quantity,
+              accountData:
+                deliveredItems.length === 1
+                  ? { Account: deliveredItems[0] }
+                  : Object.fromEntries(deliveredItems.map((acc: string, i: number) => [`Account ${i + 1}`, acc])),
             },
           });
         } catch (txError) {

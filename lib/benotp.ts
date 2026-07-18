@@ -130,6 +130,95 @@ export async function cancelNumber(pool: BenotpPool, activationId: string) {
   throw new Error(`Failed to cancel BenOTP (${poolLabel(pool)}) activation: ${JSON.stringify(data)}`);
 }
 
+export interface BenotpService {
+  service: string;
+  name: string;
+  price: number;
+  available: boolean | null;
+  repeatable: boolean;
+}
+
+// usa1 (handler_api.php) getServices: flat object keyed by service code, no
+// envelope. e.g. { "snapchat": { "name": "Snapchat", "price": "102.17", ... } }
+// Confirmed via a real getServices call on 2026-07-18 - price already has
+// any account-level discount applied per BenOTP's pricing docs, so this is
+// the number to mark up and show, not original_price.
+async function getUsa1Services(): Promise<BenotpService[]> {
+  const data = await benotpRequest('usa1', { action: 'getServices' });
+  if (typeof data === 'string') {
+    throw new Error(`BenOTP (${poolLabel('usa1')}) getServices error: ${data}`);
+  }
+  if (!data || typeof data !== 'object') {
+    throw new Error(`BenOTP (${poolLabel('usa1')}) returned an unrecognized getServices response`);
+  }
+  return Object.entries(data).map(([code, s]: [string, any]) => ({
+    service: code,
+    name: s?.name || code,
+    price: parseFloat(s?.price) || 0,
+    available: null, // usa1's getServices doesn't expose stock, unlike usa2
+    repeatable: !!s?.repeatable,
+  }));
+}
+
+// usa2 (sms.php) getServices: wrapped in {status, services}, field names
+// differ from usa1 (service_name instead of name), and it additionally
+// exposes `available`/`ltr_available` booleans that usa1 does not.
+// Confirmed via a real getServices call on 2026-07-18.
+async function getUsa2Services(): Promise<BenotpService[]> {
+  const data = await benotpRequest('usa2', { action: 'getServices' });
+  if (typeof data === 'string') {
+    throw new Error(`BenOTP (${poolLabel('usa2')}) getServices error: ${data}`);
+  }
+  if (!data || typeof data !== 'object' || data.status !== 'ok' || !data.services) {
+    throw new Error(`BenOTP (${poolLabel('usa2')}) returned an unrecognized getServices response`);
+  }
+  return Object.entries(data.services as Record<string, any>).map(([code, s]) => ({
+    service: s?.service_id || code,
+    name: s?.service_name || code,
+    price: parseFloat(s?.price) || 0,
+    available: typeof s?.available === 'boolean' ? s.available : null,
+    repeatable: !!s?.repeatable,
+  }));
+}
+
+// Bulk catalog listing - usa1 and usa2 only. all1/all2 don't have a
+// "browse everything" pricing action (all1's getPrice is a single
+// service+country lookup, all2's getPrices returned malformed data as of
+// 2026-07-18 - see getAll1Price below and the all2 gap noted at call sites).
+export async function getServices(pool: 'usa1' | 'usa2'): Promise<BenotpService[]> {
+  if (pool === 'usa1') return getUsa1Services();
+  return getUsa2Services();
+}
+
+export interface BenotpPriceQuote {
+  service: string;
+  price: number;
+  count: number;
+}
+
+// all1 (handler.php) getPrice: single service+country lookup, returns a
+// bare colon-delimited string "ACCESS_PRICE:<price>:<count>" - not JSON,
+// and not a bulk catalog like getServices. Confirmed via a real call on
+// 2026-07-18. Caller must already know which service+country to ask about
+// (e.g. from a country/service code list shown elsewhere in the UI) -
+// there is no "browse all services for this country" mode on this pool.
+export async function getAll1Price(
+  service: string,
+  country: string,
+  areaCode?: string
+): Promise<BenotpPriceQuote> {
+  const data = await benotpRequest('all1', { action: 'getPrice', service, country, areacode: areaCode });
+
+  if (typeof data !== 'string') {
+    throw new Error(`BenOTP (${poolLabel('all1')}) returned an unrecognized getPrice response`);
+  }
+  const parts = data.split(':');
+  if (parts[0] !== 'ACCESS_PRICE' || parts.length < 3) {
+    throw new Error(`BenOTP (${poolLabel('all1')}) could not price this service/country: ${data}`);
+  }
+  return { service, price: parseFloat(parts[1]) || 0, count: parseInt(parts[2], 10) || 0 };
+}
+
 export async function getBalance(pool: BenotpPool): Promise<number> {
   const data = await benotpRequest(pool, { action: 'getBalance' });
   if (typeof data === 'string') {

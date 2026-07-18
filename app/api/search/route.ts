@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAllListings } from '@/lib/accszone';
+import { getAllProducts as getHstoraProducts } from '@/lib/hstora';
 import { japRequest } from '@/lib/jap';
 import { getMarkups, computeMarkup, toNgn } from '@/lib/pricing';
 
@@ -38,6 +39,27 @@ export async function GET(request: Request) {
           category,
           price: isNaN(baseUnitPriceUsd) ? 0 : computeMarkup(toNgn(baseUnitPriceUsd), markups.accounts),
           href: `/accounts/buyacc1_${listing.id}`,
+        });
+        if (results.filter((r) => r.type === 'account').length >= MAX_RESULTS_PER_TYPE) break;
+      }
+    }
+  } catch {
+    // Provider unavailable — skip this source, don't fail the whole search
+  }
+
+  try {
+    const hstoraProducts = await getHstoraProducts();
+
+    for (const p of hstoraProducts) {
+      const name = p.name || '';
+      if (name.toLowerCase().includes(q)) {
+        results.push({
+          type: 'account',
+          id: `buyacc2_${p.id}`,
+          name,
+          category: undefined,
+          price: computeMarkup(toNgn(p.price || 0), markups.accounts),
+          href: `/accounts/buyacc2_${p.id}`,
         });
         if (results.filter((r) => r.type === 'account').length >= MAX_RESULTS_PER_TYPE) break;
       }

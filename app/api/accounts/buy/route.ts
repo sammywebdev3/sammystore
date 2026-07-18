@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { purchaseListing, getAllListings } from '@/lib/accszone';
+import { createOrder as createHstoraOrder, getProduct as getHstoraProduct } from '@/lib/hstora';
 import { getUserId } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import { getMarkups, computeMarkup, toNgn } from '@/lib/pricing';
+import crypto from 'crypto';
 
 async function handleAccszonePurchase(productId: string, qty: number, coupon: string | undefined, userId: string) {
   const rawId = productId.replace(/^buyacc1_/, '');
@@ -94,6 +96,93 @@ async function handleAccszonePurchase(productId: string, qty: number, coupon: st
   }
 }
 
+async function handleHstoraPurchase(productId: string, qty: number, userId: string) {
+  const rawId = productId.replace(/^buyacc2_/, '');
+
+  let product;
+  try {
+    product = await getHstoraProduct(rawId);
+  } catch {
+    return NextResponse.json({ success: false, error: 'Product not found' }, { status: 400 });
+  }
+
+  if (typeof product.stock_available === 'number' && product.stock_available <= 0) {
+    return NextResponse.json({ success: false, error: 'This product is out of stock' }, { status: 400 });
+  }
+  if (typeof product.stock_available === 'number' && qty > product.stock_available) {
+    return NextResponse.json(
+      { success: false, error: `Only ${product.stock_available} available - please lower the quantity` },
+      { status: 400 }
+    );
+  }
+
+  const baseUnitPriceUsd = product.price;
+  if (isNaN(baseUnitPriceUsd) || baseUnitPriceUsd <= 0) {
+    return NextResponse.json({ success: false, error: 'Invalid product price' }, { status: 500 });
+  }
+
+  const markups = await getMarkups();
+  const unitPrice = computeMarkup(toNgn(baseUnitPriceUsd), markups.accounts);
+  const cost = unitPrice * qty;
+
+  const debited = await User.findOneAndUpdate(
+    { _id: userId, walletBalance: { $gte: cost } },
+    { $inc: { walletBalance: -cost } },
+    { new: true }
+  );
+
+  if (!debited) {
+    return NextResponse.json({ success: false, error: 'Insufficient funds' }, { status: 400 });
+  }
+
+  try {
+    // HStore requires a stable external_order_id + Idempotency-Key per
+    // purchase attempt - a fresh UUID here means a genuine retry from the
+    // client creates a new order rather than colliding with a past one.
+    const externalOrderId = `sammystore-${userId}-${crypto.randomUUID()}`;
+    const result = await createHstoraOrder(rawId, qty, externalOrderId);
+
+    const items = result.delivery?.items || [];
+    const accountData =
+      items.length === 1
+        ? { Account: items[0] }
+        : Object.fromEntries(items.map((acc, i) => [`Account ${i + 1}`, acc]));
+
+    const txn = await Transaction.create({
+      userId,
+      type: 'account_purchase',
+      description: `Bought ${qty} x ${product.name}`,
+      amount: cost,
+      status: 'success',
+      metadata: {
+        productId,
+        source: 'buyacc2',
+        productName: product.name,
+        category: null,
+        quantity: qty,
+        accountData,
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Purchase successful!',
+      accountData,
+      newBalance: debited.walletBalance,
+      orderId: String(txn._id)
+    });
+  } catch (providerError: any) {
+    await User.findByIdAndUpdate(userId, { $inc: { walletBalance: cost } });
+    // Same reasoning as the AccsZone branch above - log the real provider
+    // error server-side, never surface it to the customer.
+    console.error('HStora purchase failed:', providerError?.message || providerError);
+    return NextResponse.json(
+      { success: false, error: 'This item could not be delivered right now - your wallet has been refunded.' },
+      { status: 400 }
+    );
+  }
+}
+
 export async function POST(request: Request) {
   await dbConnect();
   const userId = getUserId(request);
@@ -114,6 +203,9 @@ export async function POST(request: Request) {
   try {
     if (idStr.startsWith('buyacc1_')) {
       return await handleAccszonePurchase(idStr, qty, coupon, userId);
+    }
+    if (idStr.startsWith('buyacc2_')) {
+      return await handleHstoraPurchase(idStr, qty, userId);
     }
     return NextResponse.json({ success: false, error: 'Unknown product source' }, { status: 400 });
   } catch (error: any) {

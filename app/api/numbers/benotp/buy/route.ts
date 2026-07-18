@@ -1,12 +1,47 @@
 import { NextResponse } from 'next/server';
-import { getNumber, cancelNumber, poolLabel, BenotpPool } from '@/lib/benotp';
-import { getBenotpPrices } from '@/lib/pricing';
+import { getNumber, cancelNumber, poolLabel, getServices, getAll1Price, BenotpPool } from '@/lib/benotp';
+import { getBenotpPrices, getMarkups, toNgn, computeMarkup } from '@/lib/pricing';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import { getUserId } from '@/lib/auth';
 
 const VALID_POOLS: BenotpPool[] = ['usa1', 'usa2', 'all1', 'all2'];
+
+// usa1/usa2/all1 now have live per-service pricing (see lib/benotp.ts) - the
+// numbers page shows a real price for each specific service before purchase,
+// so this route must charge that same price, not a flat per-pool number.
+// Charging flat here while the UI quotes live per-service prices was a real
+// bug: two customers picking different-priced services from the same pool
+// would see different quotes but pay the identical flat amount.
+// all2 stays on the flat admin-set price - its getPrices response is
+// malformed on BenOTP's side as of 2026-07-18, so there's no live price to
+// trust yet (see notes in lib/benotp.ts).
+async function resolveLivePriceNgn(
+  pool: BenotpPool,
+  service: string,
+  country: string | undefined,
+  areaCode: string | undefined
+): Promise<number | null> {
+  const markups = await getMarkups();
+
+  if (pool === 'usa1' || pool === 'usa2') {
+    const services = await getServices(pool);
+    const match = services.find((s) => s.service === service);
+    if (!match) return null;
+    if (match.available === false) return null;
+    return computeMarkup(toNgn(match.price), markups.numbers);
+  }
+
+  if (pool === 'all1') {
+    if (!country) return null;
+    const quote = await getAll1Price(service, country, areaCode);
+    if (!quote || quote.price <= 0 || quote.count <= 0) return null;
+    return computeMarkup(toNgn(quote.price), markups.numbers);
+  }
+
+  return null; // all2 falls back to flat pricing below
+}
 
 export async function POST(request: Request) {
   await dbConnect();
@@ -30,11 +65,24 @@ export async function POST(request: Request) {
   }
 
   try {
-    const prices = await getBenotpPrices();
-    const priceNgn = prices[pool];
+    let priceNgn: number | null = null;
+    try {
+      priceNgn = await resolveLivePriceNgn(pool, service, country, areaCode);
+    } catch (priceError: any) {
+      console.error(`BenOTP live price lookup failed (${pool}/${service}):`, priceError?.message || priceError);
+      priceNgn = null;
+    }
+
+    // Live lookup failed, service not found, or pool is all2 (no live
+    // pricing yet) - fall back to the flat admin-set price rather than
+    // blocking the purchase outright.
+    if (priceNgn === null) {
+      const flatPrices = await getBenotpPrices();
+      priceNgn = flatPrices[pool];
+    }
 
     if (!priceNgn || priceNgn <= 0) {
-      return NextResponse.json({ error: 'Pricing not configured for this pool' }, { status: 500 });
+      return NextResponse.json({ error: 'Pricing not available for this service right now' }, { status: 400 });
     }
 
     // Same atomic check-and-deduct pattern used for TigerSMS/AccsZone -
