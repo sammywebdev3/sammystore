@@ -1,29 +1,28 @@
 import { NextResponse } from 'next/server';
-import { purchaseListing, getAllListings } from '@/lib/accszone';
+import { createOrder as createHstoraOrder, getProduct as getHstoraProduct } from '@/lib/hstora';
 import { getUserId } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import { getMarkups, computeMarkup, toNgn } from '@/lib/pricing';
+import crypto from 'crypto';
 
-// buyacc1 (AccsZone) only now - buyacc2 (HStora) purchases go through
-// /api/logs/buy instead, matching the /accounts vs /logs page split.
 export async function POST(request: Request) {
   await dbConnect();
   const userId = getUserId(request);
   if (!userId) return NextResponse.json({ success: false, error: 'Please login' }, { status: 401 });
 
-  const { productId, amount, coupon } = await request.json();
+  const { productId, amount } = await request.json();
   const qty = parseInt(String(amount)) || 1;
   if (!productId || qty <= 0) {
     return NextResponse.json({ success: false, error: 'Invalid request' }, { status: 400 });
   }
 
   const idStr = String(productId);
-  if (!idStr.startsWith('buyacc1_')) {
+  if (!idStr.startsWith('buyacc2_')) {
     return NextResponse.json({ success: false, error: 'Unknown product source' }, { status: 400 });
   }
-  const rawId = idStr.replace(/^buyacc1_/, '');
+  const rawId = idStr.replace(/^buyacc2_/, '');
 
   const user = await User.findById(userId);
   if (!user) return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
@@ -31,30 +30,36 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Your account is suspended. Contact support.' }, { status: 403 });
   }
 
-  const listings = await getAllListings();
-  const listing = listings.find((l: any) => String(l.id) === String(rawId));
-
-  if (!listing) {
+  let product;
+  try {
+    product = await getHstoraProduct(rawId);
+  } catch {
     return NextResponse.json({ success: false, error: 'Product not found' }, { status: 400 });
   }
 
-  if (typeof listing.available_stock === 'number' && listing.available_stock <= 0) {
+  if (typeof product.stock_available === 'number' && product.stock_available <= 0) {
     return NextResponse.json({ success: false, error: 'This product is out of stock' }, { status: 400 });
   }
-  if (typeof listing.available_stock === 'number' && qty > listing.available_stock) {
+  if (typeof product.stock_available === 'number' && qty > product.stock_available) {
     return NextResponse.json(
-      { success: false, error: `Only ${listing.available_stock} available - please lower the quantity` },
+      { success: false, error: `Only ${product.stock_available} available - please lower the quantity` },
       { status: 400 }
     );
   }
 
-  const baseUnitPriceUsd = parseFloat(String(listing.price));
-  if (isNaN(baseUnitPriceUsd) || baseUnitPriceUsd <= 0) {
+  const baseUnitPrice = product.price;
+  if (isNaN(baseUnitPrice) || baseUnitPrice <= 0) {
     return NextResponse.json({ success: false, error: 'Invalid product price' }, { status: 500 });
   }
 
   const markups = await getMarkups();
-  const unitPrice = computeMarkup(toNgn(baseUnitPriceUsd), markups.accounts);
+  // Trust HStora's own `currency` field rather than assuming USD - see the
+  // matching fix in /api/logs/products.
+  const baseUnitPriceNgn =
+    product.currency && product.currency.toUpperCase() !== 'USD'
+      ? baseUnitPrice
+      : toNgn(baseUnitPrice);
+  const unitPrice = computeMarkup(baseUnitPriceNgn, markups.accounts);
   const cost = unitPrice * qty;
 
   const debited = await User.findOneAndUpdate(
@@ -68,24 +73,29 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await purchaseListing(rawId, qty, coupon || undefined);
+    // HStore requires a stable external_order_id + Idempotency-Key per
+    // purchase attempt - a fresh UUID here means a genuine retry from the
+    // client creates a new order rather than colliding with a past one.
+    const externalOrderId = `sammystore-${userId}-${crypto.randomUUID()}`;
+    const result = await createHstoraOrder(rawId, qty, externalOrderId);
 
+    const items = result.delivery?.items || [];
     const accountData =
-      result.accounts.length === 1
-        ? { Account: result.accounts[0] }
-        : Object.fromEntries(result.accounts.map((acc, i) => [`Account ${i + 1}`, acc]));
+      items.length === 1
+        ? { Account: items[0] }
+        : Object.fromEntries(items.map((acc, i) => [`Account ${i + 1}`, acc]));
 
     const txn = await Transaction.create({
       userId,
       type: 'account_purchase',
-      description: `Bought ${qty} x ${listing.title}`,
+      description: `Bought ${qty} x ${product.name}`,
       amount: cost,
       status: 'success',
       metadata: {
         productId,
-        source: 'buyacc1',
-        productName: listing.title,
-        category: listing.subcategory?.title || listing.category?.title || null,
+        source: 'buyacc2',
+        productName: product.name,
+        category: null,
         quantity: qty,
         accountData,
       },
@@ -100,7 +110,7 @@ export async function POST(request: Request) {
     });
   } catch (providerError: any) {
     await User.findByIdAndUpdate(userId, { $inc: { walletBalance: cost } });
-    console.error('AccsZone purchase failed:', providerError?.message || providerError);
+    console.error('HStora purchase failed:', providerError?.message || providerError);
     return NextResponse.json(
       { success: false, error: 'This item could not be delivered right now - your wallet has been refunded.' },
       { status: 400 }

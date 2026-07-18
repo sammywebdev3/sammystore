@@ -53,13 +53,17 @@ export async function GET(request: Request) {
     for (const p of hstoraProducts) {
       const name = p.name || '';
       if (name.toLowerCase().includes(q)) {
+        // Trust HStora's own `currency` field rather than assuming USD -
+        // see the matching fix in /api/logs/products.
+        const baseUnitPriceNgn =
+          p.currency && String(p.currency).toUpperCase() !== 'USD' ? (p.price || 0) : toNgn(p.price || 0);
         results.push({
           type: 'account',
           id: `buyacc2_${p.id}`,
           name,
           category: undefined,
-          price: computeMarkup(toNgn(p.price || 0), markups.accounts),
-          href: `/accounts/buyacc2_${p.id}`,
+          price: computeMarkup(baseUnitPriceNgn, markups.accounts),
+          href: `/logs/buyacc2_${p.id}`,
         });
         if (results.filter((r) => r.type === 'account').length >= MAX_RESULTS_PER_TYPE) break;
       }

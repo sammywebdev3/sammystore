@@ -48,7 +48,14 @@ export default function BenotpServerGrid({ selected, onSelect }: Props) {
         href="/accounts"
         className="flex items-center gap-2 justify-center py-4 px-3 rounded-xl font-semibold text-sm bg-white text-gray-700 border-2 border-gray-200 hover:border-[#f97316] transition-all mb-3"
       >
-        🛍️ Buy Accounts/Logs
+        🛍️ Buy Accounts
+      </Link>
+
+      <Link
+        href="/logs"
+        className="flex items-center gap-2 justify-center py-4 px-3 rounded-xl font-semibold text-sm bg-white text-gray-700 border-2 border-gray-200 hover:border-[#f97316] transition-all mb-3"
+      >
+        📄 Buy Logs
       </Link>
 
       <Link

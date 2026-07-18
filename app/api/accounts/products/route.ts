@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { getMarkups, computeMarkup, toNgn } from '@/lib/pricing';
 import { getAllListings as getAccszoneListings } from '@/lib/accszone';
-import { getAllProducts as getHstoraProducts } from '@/lib/hstora';
 
-async function fetchAccszoneProducts(markupPercent: number): Promise<{ products: any[]; error: string | null }> {
+// buyacc1 (AccsZone) only - buyacc2 (HStora) has its own page/API now at
+// /logs, same split as Virtual Numbers, SMM, and My Catalog each having
+// their own page rather than two providers merged behind one listing.
+export async function GET() {
+  const markups = await getMarkups();
+
   if (!process.env.ACCSZONE_API_KEY) {
-    return { products: [], error: 'AccsZone API key not configured' };
+    return NextResponse.json(
+      { success: false, error: 'AccsZone API key not configured', products: [] },
+      { status: 500 }
+    );
   }
 
   try {
@@ -17,72 +24,18 @@ async function fetchAccszoneProducts(markupPercent: number): Promise<{ products:
       mainCategory: listing.category?.title || 'Other',
       // AccsZone prices in USD - convert to NGN before applying markup,
       // same conversion already used for the TigerSMS numbers feature.
-      price: computeMarkup(toNgn(parseFloat(listing.price) || 0), markupPercent),
+      price: computeMarkup(toNgn(parseFloat(listing.price) || 0), markups.accounts),
       stock: typeof listing.available_stock === 'number' ? listing.available_stock : null,
       instructions: listing.description || null,
       video: null,
       source: 'buyacc1',
     }));
-    return { products, error: null };
+
+    return NextResponse.json({ success: true, products, count: products.length });
   } catch (error: any) {
-    return { products: [], error: error.message || 'AccsZone network error' };
-  }
-}
-
-async function fetchHstoraProducts(markupPercent: number): Promise<{ products: any[]; error: string | null }> {
-  if (!process.env.HSTORA_API_KEY || !process.env.HSTORA_API_SECRET) {
-    return { products: [], error: 'HStora API key not configured' };
-  }
-
-  try {
-    const listings = await getHstoraProducts();
-    const products = listings.map((listing) => ({
-      id: `buyacc2_${listing.id}`,
-      name: listing.name,
-      category: 'Other',
-      mainCategory: 'Other',
-      // HStora's /catalog response includes a `currency` field per listing -
-      // trust that instead of assuming USD (a hardcoded USD assumption is
-      // exactly what caused the BenOTP numbers pricing bug to overcharge
-      // ~1550x when that provider's prices turned out to already be NGN).
-      price: computeMarkup(
-        listing.currency && listing.currency.toUpperCase() !== 'USD'
-          ? (listing.price || 0)
-          : toNgn(listing.price || 0),
-        markupPercent
-      ),
-      stock: typeof listing.stock_available === 'number' ? listing.stock_available : null,
-      instructions: listing.short_description || null,
-      video: null,
-      source: 'buyacc2',
-    }));
-    return { products, error: null };
-  } catch (error: any) {
-    return { products: [], error: error.message || 'HStora network error' };
-  }
-}
-
-export async function GET() {
-  const markups = await getMarkups();
-
-  const [accszone, hstora] = await Promise.all([
-    fetchAccszoneProducts(markups.accounts),
-    fetchHstoraProducts(markups.accounts),
-  ]);
-
-  const products = [...accszone.products, ...hstora.products];
-
-  if (products.length === 0 && (accszone.error || hstora.error)) {
     return NextResponse.json(
-      { success: false, error: accszone.error || hstora.error, products: [] },
+      { success: false, error: error.message || 'AccsZone network error', products: [] },
       { status: 500 }
     );
   }
-
-  return NextResponse.json({
-    success: true,
-    products,
-    count: products.length,
-    sourceErrors: { buyacc1: accszone.error, buyacc2: hstora.error },
-  });
 }

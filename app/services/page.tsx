@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
 
-type Tab = 'all' | 'numbers' | 'smm' | 'accounts' | 'catalog';
+type Tab = 'all' | 'numbers' | 'smm' | 'accounts' | 'logs' | 'catalog';
 
 export default function ServicesCatalogPage() {
   const [tab, setTab] = useState<Tab>('all');
@@ -12,6 +12,9 @@ export default function ServicesCatalogPage() {
   const [accountProducts, setAccountProducts] = useState<any[]>([]);
   const [accountsLoading, setAccountsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const [logProducts, setLogProducts] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
 
   const [smmServices, setSmmServices] = useState<any[]>([]);
   const [smmCategories, setSmmCategories] = useState<string[]>([]);
@@ -25,6 +28,14 @@ export default function ServicesCatalogPage() {
       })
       .catch(() => {})
       .finally(() => setAccountsLoading(false));
+
+    fetch('/api/logs/products')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.products)) setLogProducts(data.products);
+      })
+      .catch(() => {})
+      .finally(() => setLogsLoading(false));
 
     fetch('/api/smm/services')
       .then((res) => res.json())
@@ -68,6 +79,7 @@ export default function ServicesCatalogPage() {
     { key: 'numbers', label: 'Virtual Numbers' },
     { key: 'smm', label: 'SMM' },
     { key: 'accounts', label: 'Accounts' },
+    { key: 'logs', label: 'Logs' },
     { key: 'catalog', label: 'My Catalog' },
   ];
 
@@ -212,6 +224,41 @@ export default function ServicesCatalogPage() {
               )}
             </section>
           )}
+          {(tab === 'all' || tab === 'logs') && (
+            <section className="mb-10">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-800">Buy Logs</h2>
+                <Link href="/logs" className="text-[#f97316] text-sm font-semibold">
+                  Open →
+                </Link>
+              </div>
+
+              {logsLoading ? (
+                <div className="card p-6 text-gray-500 text-sm">Loading products...</div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {(tab === 'logs' ? logProducts : logProducts.slice(0, 6)).map((product) => (
+                    <Link
+                      key={product.id}
+                      href={`/logs/${product.id}`}
+                      className="card p-6 cursor-pointer transition-all border-2 border-transparent hover:border-[#f97316] block"
+                    >
+                      <h3 className="text-lg font-bold text-gray-800 mb-2">{product.name || product.title}</h3>
+                      <p className="text-xl font-bold text-[#f97316] mb-1">
+                        ₦{parseFloat(product.price || '0').toLocaleString()}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {(product.stock ?? 0) > 0 || product.stock === undefined
+                          ? `${product.stock || 'In Stock'} available`
+                          : 'Out of stock'}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
         {(tab === 'all' || tab === 'catalog') && (
               <section className="mb-10">
                 <div className="flex items-center justify-between mb-4">

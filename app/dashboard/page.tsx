@@ -195,7 +195,7 @@ export default function DashboardPage() {
                       <span className="text-[#f97316] font-bold text-sm">₦{tx.amount.toLocaleString()}</span>
                       {tx.type === 'account_purchase' && tx.metadata?.productId && (
                         <Link
-                          href={`/accounts/${tx.metadata.productId}`}
+                          href={`${tx.metadata.source === 'buyacc2' ? '/logs' : '/accounts'}/${tx.metadata.productId}`}
                           className="text-xs text-gray-500 hover:text-[#f97316] font-semibold whitespace-nowrap"
                         >
                           Buy Again
@@ -224,6 +224,11 @@ export default function DashboardPage() {
               <div className="text-4xl mb-4">🛍️</div>
               <h3 className="text-xl font-bold mb-2 text-gray-800">Buy Accounts</h3>
               <p className="text-gray-500 text-sm">Pre-verified accounts</p>
+            </Link>
+            <Link href="/logs" className="card p-6 group">
+              <div className="text-4xl mb-4">📄</div>
+              <h3 className="text-xl font-bold mb-2 text-gray-800">Buy Logs</h3>
+              <p className="text-gray-500 text-sm">HStora accounts &amp; logs</p>
             </Link>
             <Link href="/services" className="card p-6 group">
               <div className="text-4xl mb-4">🗂️</div>
