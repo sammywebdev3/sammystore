@@ -176,6 +176,36 @@ export default function DashboardPage() {
             </div>
           )}
 
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Services</h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Link href="/numbers" className="card p-6 group">
+              <div className="text-4xl mb-4">📡</div>
+              <h3 className="text-xl font-bold mb-2 text-gray-800">Virtual Numbers</h3>
+              <p className="text-gray-500 text-sm">Rent anonymous numbers</p>
+            </Link>
+            <Link href="/smm" className="card p-6 group">
+              <div className="text-4xl mb-4">📊</div>
+              <h3 className="text-xl font-bold mb-2 text-gray-800">SMM Panel</h3>
+              <p className="text-gray-500 text-sm">Social media boost</p>
+            </Link>
+            <Link href="/accounts" className="card p-6 group">
+              <div className="text-4xl mb-4">🛍️</div>
+              <h3 className="text-xl font-bold mb-2 text-gray-800">Buy Accounts</h3>
+              <p className="text-gray-500 text-sm">Pre-verified accounts</p>
+            </Link>
+            <Link href="/logs" className="card p-6 group">
+              <div className="text-4xl mb-4">📄</div>
+              <h3 className="text-xl font-bold mb-2 text-gray-800">Buy Logs</h3>
+              <p className="text-gray-500 text-sm">Verified logs &amp; digital accounts</p>
+            </Link>
+          
+          <Link href="/support" className="card p-6 group">
+            <div className="text-4xl mb-4">🎫</div>
+            <h3 className="text-xl font-bold mb-2 text-gray-800">Support</h3>
+            <p className="text-gray-500 text-sm">Open a support ticket</p>
+          </Link>
+        </div>
+
           <div className="mb-8">
             <h2 className="text-xl font-bold text-gray-800 mb-4">Recent Activity</h2>
             {recentActivity.length === 0 ? (
@@ -206,30 +236,6 @@ export default function DashboardPage() {
                 ))}
               </div>
             )}
-          </div>
-
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Services</h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Link href="/numbers" className="card p-6 group">
-              <div className="text-4xl mb-4">📡</div>
-              <h3 className="text-xl font-bold mb-2 text-gray-800">Virtual Numbers</h3>
-              <p className="text-gray-500 text-sm">Rent anonymous numbers</p>
-            </Link>
-            <Link href="/smm" className="card p-6 group">
-              <div className="text-4xl mb-4">📊</div>
-              <h3 className="text-xl font-bold mb-2 text-gray-800">SMM Panel</h3>
-              <p className="text-gray-500 text-sm">Social media boost</p>
-            </Link>
-            <Link href="/accounts" className="card p-6 group">
-              <div className="text-4xl mb-4">🛍️</div>
-              <h3 className="text-xl font-bold mb-2 text-gray-800">Buy Accounts</h3>
-              <p className="text-gray-500 text-sm">Pre-verified accounts</p>
-            </Link>
-            <Link href="/logs" className="card p-6 group">
-              <div className="text-4xl mb-4">📄</div>
-              <h3 className="text-xl font-bold mb-2 text-gray-800">Buy Logs</h3>
-              <p className="text-gray-500 text-sm">Verified logs &amp; digital accounts</p>
-            </Link>
           </div>
         </main>
       </div>
