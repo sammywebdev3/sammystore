@@ -132,6 +132,20 @@ export default function AccountDetailPage() {
         <div className="flex flex-col md:flex-row max-w-7xl mx-auto">
           <Sidebar />
           <main className="flex-1 p-6 md:p-8">
+            <p className="text-gray-600 mb-4">Loading...</p>
+          </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="flex flex-col md:flex-row max-w-7xl mx-auto">
+          <Sidebar />
+          <main className="flex-1 p-6 md:p-8">
             <p className="text-gray-600 mb-4">Product not found.</p>
             <Link href="/accounts" className="text-[#f97316] font-semibold">← Back to Buy Accounts</Link>
           </main>
