@@ -27,6 +27,10 @@ const CATEGORY_ICONS: Record<string, string> = {
   YouTube: '▶️',
   Pinterest: '📌',
   Tinder: '❤️',
+  Dating: '❤️',
+  WhatsApp: '💬',
+  Email: '📨',
+  'Crypto/Betting': '🎲',
   Yahoo: '🟣',
   Outlook: '📨',
   Twitch: '🎥',
@@ -151,7 +155,7 @@ export default function LogsPage() {
           </Link>
           <div className="mb-6">
             <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">Buy Logs</h1>
-            <p className="text-gray-600">Premium verified logs & digital accounts (HStora)</p>
+            <p className="text-gray-600">Premium verified logs &amp; digital accounts</p>
           </div>
 
           {/* Persistent search - works regardless of which category is open */}

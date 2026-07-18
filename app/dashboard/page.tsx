@@ -228,7 +228,7 @@ export default function DashboardPage() {
             <Link href="/logs" className="card p-6 group">
               <div className="text-4xl mb-4">📄</div>
               <h3 className="text-xl font-bold mb-2 text-gray-800">Buy Logs</h3>
-              <p className="text-gray-500 text-sm">HStora accounts &amp; logs</p>
+              <p className="text-gray-500 text-sm">Verified logs &amp; digital accounts</p>
             </Link>
             <Link href="/services" className="card p-6 group">
               <div className="text-4xl mb-4">🗂️</div>

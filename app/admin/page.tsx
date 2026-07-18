@@ -10,6 +10,9 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const BENOTP_POOL_LABELS: { key: string; label: string }[] = [
+  { key: 'usa1', label: 'BenOTP - USA Server 1' },
+  { key: 'usa2', label: 'BenOTP - USA Server 2' },
+  { key: 'all1', label: 'BenOTP - All Countries 1' },
   { key: 'all2', label: 'BenOTP - All Countries 2' },
 ];
 
@@ -512,11 +515,11 @@ export default function AdminPage() {
             ))}
           </div>
 
-          <h3 className="text-lg font-bold text-gray-800 font-mono mb-2">{`> BENOTP_ALL_COUNTRIES_2 (flat price per number)`}</h3>
+          <h3 className="text-lg font-bold text-gray-800 font-mono mb-2">{`> BENOTP_FALLBACK_PRICE (flat price per number)`}</h3>
           <p className="text-gray-500 text-sm mb-4">
-            USA Server 1, USA Server 2, and All Countries 1 now have live per-service pricing and are charged
-            using the &quot;Virtual Numbers&quot; markup % above. Only All Countries 2 still has no working live
-            price feed on BenOTP&apos;s side, so it's charged at this flat NGN price per number instead.
+            All four BenOTP pools now have live per-service pricing and are charged using the &quot;Virtual
+            Numbers&quot; markup % above. This flat NGN price is only used as a fallback if a live price lookup
+            fails for some reason - it&apos;s no longer the normal price on any pool.
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             {BENOTP_POOL_LABELS.map((pool) => (

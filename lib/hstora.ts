@@ -94,6 +94,40 @@ export interface HstoraProduct {
   price_tiers?: { min_quantity: number; unit_price: number }[];
 }
 
+// HStora's /catalog response doesn't document a real category/platform
+// field, so this derives one from the product name instead of leaving
+// every single product lumped under one "Other" bucket - which is what was
+// making /logs a single unbrowsable wall of products on mobile, unlike
+// /accounts (AccsZone) which gets real subcategories straight from its API.
+// If HStora ever does send an actual category/platform/tag field on an
+// item, prefer that over guessing from the name.
+const CATEGORY_KEYWORDS: [string, RegExp][] = [
+  ['Twitter/X', /\b(twitter|x\.com|\bx\b account)/i],
+  ['Instagram', /instagram|\big\b/i],
+  ['Facebook', /facebook|\bfb\b/i],
+  ['Telegram', /telegram|tdata|\btg\b/i],
+  ['TikTok', /tiktok|tik tok/i],
+  ['Threads', /\bthreads\b/i],
+  ['Discord', /discord/i],
+  ['Snapchat', /snapchat|\bsnap\b/i],
+  ['LinkedIn', /linkedin/i],
+  ['WhatsApp', /whatsapp/i],
+  ['Gmail', /gmail|google account/i],
+  ['Email', /\bemail\b|outlook|yahoo mail|hotmail/i],
+  ['Dating', /tinder|bumble|hinge|dating/i],
+  ['Crypto/Betting', /paxful|bovada|binance|coinbase|betting|crypto/i],
+];
+
+export function inferHstoraCategory(name: string, raw?: Record<string, any>): string {
+  const explicit = raw?.category || raw?.platform || raw?.tag || raw?.group;
+  if (typeof explicit === 'string' && explicit.trim()) return explicit.trim();
+
+  for (const [label, pattern] of CATEGORY_KEYWORDS) {
+    if (pattern.test(name)) return label;
+  }
+  return 'Other';
+}
+
 // Walks every page of /catalog to return the full active product list in
 // one call, same shape as getAllListings() in lib/accszone.ts.
 export async function getAllProducts(): Promise<HstoraProduct[]> {

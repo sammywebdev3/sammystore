@@ -181,10 +181,11 @@ async function getUsa2Services(): Promise<BenotpService[]> {
   }));
 }
 
-// Bulk catalog listing - usa1 and usa2 only. all1/all2 don't have a
-// "browse everything" pricing action (all1's getPrice is a single
-// service+country lookup, all2's getPrices returned malformed data as of
-// 2026-07-18 - see getAll1Price below and the all2 gap noted at call sites).
+// Bulk PRICED catalog - usa1 and usa2 only. all1/all2 do have their own
+// getServices actions (see getAll1Services/getAll2Services below), but
+// those return an unpriced ID->name directory, not a browsable price list -
+// getting an actual price on those two pools still means calling
+// getAll1Price/getAll2Price for one specific service+country at a time.
 export async function getServices(pool: 'usa1' | 'usa2'): Promise<BenotpService[]> {
   if (pool === 'usa1') return getUsa1Services();
   return getUsa2Services();
@@ -197,11 +198,10 @@ export interface BenotpPriceQuote {
 }
 
 // all1 (handler.php) getPrice: single service+country lookup, returns a
-// bare colon-delimited string "ACCESS_PRICE:<price>:<count>" - not JSON,
-// and not a bulk catalog like getServices. Confirmed via a real call on
-// 2026-07-18. Caller must already know which service+country to ask about
-// (e.g. from a country/service code list shown elsewhere in the UI) -
-// there is no "browse all services for this country" mode on this pool.
+// bare colon-delimited string "ACCESS_PRICE:<price>:<count>" - confirmed
+// live on 2026-07-18 (e.g. "ACCESS_PRICE:2698.87:74"). This is still the
+// only way to get an actual price - see getAll1Services below for what
+// getServices actually returns instead.
 export async function getAll1Price(
   service: string,
   country: string,
@@ -217,6 +217,71 @@ export async function getAll1Price(
     throw new Error(`BenOTP (${poolLabel('all1')}) could not price this service/country: ${data}`);
   }
   return { service, price: parseFloat(parts[1]) || 0, count: parseInt(parts[2], 10) || 0 };
+}
+
+// all2 (all_server_2.php) getPrices: same single service+country(+areacode)
+// lookup as all1's getPrice, just pluralized and on a different endpoint -
+// confirmed to accept the same params (see benotp.com's own API console).
+// Kept defensive on the response shape since it hasn't been run live yet,
+// but tries the same bare "ACCESS_PRICE:<price>:<count>" format first
+// since it's the same underlying protocol family as every other pool here.
+export async function getAll2Price(
+  service: string,
+  country: string,
+  areaCode?: string
+): Promise<BenotpPriceQuote> {
+  const data = await benotpRequest('all2', { action: 'getPrices', service, country, areacode: areaCode });
+
+  if (typeof data === 'string') {
+    const parts = data.split(':');
+    if (parts[0] === 'ACCESS_PRICE' && parts.length >= 3) {
+      return { service, price: parseFloat(parts[1]) || 0, count: parseInt(parts[2], 10) || 0 };
+    }
+    throw new Error(`BenOTP (${poolLabel('all2')}) could not price this service/country: ${data}`);
+  }
+  if (data && typeof data === 'object') {
+    const price = parseFloat(data.price ?? data.cost ?? data.ACCESS_PRICE);
+    const count = parseInt(data.count ?? data.quantity ?? data.available, 10);
+    if (!isNaN(price)) return { service, price, count: isNaN(count) ? 0 : count };
+  }
+  throw new Error(`BenOTP (${poolLabel('all2')}) returned an unrecognized getPrices response`);
+}
+
+export interface BenotpServiceDirectoryEntry {
+  service: string;
+  name: string;
+}
+
+// all1's getServices (handler.php?action=getServices, no country param) is
+// NOT a priced catalog like usa1/usa2's getServices - confirmed live on
+// 2026-07-18, it's a flat platform-wide directory mapping a numeric service
+// ID straight to a display name, e.g. {"1106":{"name":"101Sweets"}, ...},
+// with no price/country/pool scoping at all. This is only good for turning
+// a cryptic ID into a real name for a picker - getAll1Price above is still
+// the only way to get an actual price for a specific service+country.
+export async function getAll1Services(): Promise<BenotpServiceDirectoryEntry[]> {
+  const data = await benotpRequest('all1', { action: 'getServices' });
+  if (!data || typeof data !== 'object') {
+    throw new Error(`BenOTP (${poolLabel('all1')}) returned an unrecognized getServices response`);
+  }
+  return Object.entries(data as Record<string, any>).map(([code, s]) => ({
+    service: code,
+    name: s?.name || code,
+  }));
+}
+
+// all2's getServices takes an optional `country` filter per benotp.com's
+// own API console, but hasn't been run live yet - assumed to return the
+// same flat ID->name directory shape as all1's until confirmed otherwise.
+export async function getAll2Services(country?: string): Promise<BenotpServiceDirectoryEntry[]> {
+  const data = await benotpRequest('all2', { action: 'getServices', country });
+  if (!data || typeof data !== 'object') {
+    throw new Error(`BenOTP (${poolLabel('all2')}) returned an unrecognized getServices response`);
+  }
+  return Object.entries(data as Record<string, any>).map(([code, s]) => ({
+    service: code,
+    name: s?.name || code,
+  }));
 }
 
 export async function getBalance(pool: BenotpPool): Promise<number> {

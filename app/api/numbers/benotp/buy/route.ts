@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getNumber, cancelNumber, poolLabel, getServices, getAll1Price, BenotpPool } from '@/lib/benotp';
+import { getNumber, cancelNumber, poolLabel, getServices, getAll1Price, getAll2Price, BenotpPool } from '@/lib/benotp';
 import { getBenotpPrices, getMarkups, computeMarkup } from '@/lib/pricing';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
@@ -8,15 +8,14 @@ import { getUserId } from '@/lib/auth';
 
 const VALID_POOLS: BenotpPool[] = ['usa1', 'usa2', 'all1', 'all2'];
 
-// usa1/usa2/all1 now have live per-service pricing (see lib/benotp.ts) - the
-// numbers page shows a real price for each specific service before purchase,
-// so this route must charge that same price, not a flat per-pool number.
-// Charging flat here while the UI quotes live per-service prices was a real
-// bug: two customers picking different-priced services from the same pool
-// would see different quotes but pay the identical flat amount.
-// all2 stays on the flat admin-set price - its getPrices response is
-// malformed on BenOTP's side as of 2026-07-18, so there's no live price to
-// trust yet (see notes in lib/benotp.ts).
+// All four pools now have a live per-service pricing path (see
+// lib/benotp.ts) - the numbers page shows a real price for each specific
+// service before purchase, so this route must charge that same price, not
+// a flat per-pool number. Charging flat here while the UI quotes live
+// per-service prices was a real bug: two customers picking different-priced
+// services from the same pool would see different quotes but pay the
+// identical flat amount. The flat admin-set price is now only a fallback
+// for when a live lookup fails (see priceNgn === null below).
 async function resolveLivePriceNgn(
   pool: BenotpPool,
   service: string,
@@ -36,14 +35,16 @@ async function resolveLivePriceNgn(
     return computeMarkup(match.price, markups.numbers);
   }
 
-  if (pool === 'all1') {
+  if (pool === 'all1' || pool === 'all2') {
     if (!country) return null;
-    const quote = await getAll1Price(service, country, areaCode);
+    const quote = pool === 'all1'
+      ? await getAll1Price(service, country, areaCode)
+      : await getAll2Price(service, country, areaCode);
     if (!quote || quote.price <= 0 || quote.count <= 0) return null;
     return computeMarkup(quote.price, markups.numbers);
   }
 
-  return null; // all2 falls back to flat pricing below
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -76,9 +77,8 @@ export async function POST(request: Request) {
       priceNgn = null;
     }
 
-    // Live lookup failed, service not found, or pool is all2 (no live
-    // pricing yet) - fall back to the flat admin-set price rather than
-    // blocking the purchase outright.
+    // Live lookup failed or service not found - fall back to the flat
+    // admin-set price rather than blocking the purchase outright.
     if (priceNgn === null) {
       const flatPrices = await getBenotpPrices();
       priceNgn = flatPrices[pool];

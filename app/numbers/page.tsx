@@ -47,25 +47,25 @@ export default function VirtualNumbersPage() {
   const smsPollActiveRef = useRef(true);
 
   // BenOTP is a separate, self-contained flow with its own state - it
-  // doesn't share countries/services with TigerSMS since BenOTP's four
-  // pools don't have a live per-country service catalog wired up yet
-  // (only "All Countries 1" documents a getPrice/service-list endpoint).
-  // Service is entered directly as a code (e.g. "wa" for WhatsApp) per
-  // BenOTP's own API convention.
+  // doesn't share countries/services with TigerSMS. usa1/usa2 have a
+  // browsable priced catalog; all1/all2 have an unpriced service-name
+  // directory (for picking a real name instead of typing a raw code) plus
+  // a per-service+country price check.
   const [benotpPool, setBenotpPool] = useState<BenotpPool>('usa1');
   const [benotpService, setBenotpService] = useState('');
   const [benotpCountry, setBenotpCountry] = useState('');
   const [benotpAreaCode, setBenotpAreaCode] = useState('');
   const [benotpCarrier, setBenotpCarrier] = useState('');
-  // Live catalog for usa1/usa2 (browsable) - all1 has no bulk listing
-  // action, so it uses a one-off "check price" quote instead (see below).
-  // all2 stays on flat admin-set pricing until its getPrices response is
-  // fixed on BenOTP's side - see notes in lib/benotp.ts.
+  // Live priced catalog for usa1/usa2.
   const [benotpServices, setBenotpServices] = useState<
     { service: string; name: string; priceNgn: number; available: boolean | null }[]
   >([]);
   const [benotpServicesLoading, setBenotpServicesLoading] = useState(false);
   const [benotpServicesError, setBenotpServicesError] = useState('');
+  // Unpriced service-name directory for all1/all2 (getServices there is
+  // just an ID->name lookup, not a priced list - see lib/benotp.ts).
+  const [benotpDirectory, setBenotpDirectory] = useState<{ service: string; name: string }[]>([]);
+  const [benotpDirectoryLoading, setBenotpDirectoryLoading] = useState(false);
   const [benotpQuote, setBenotpQuote] = useState<{ priceNgn: number; count: number } | null>(null);
   const [benotpQuoteLoading, setBenotpQuoteLoading] = useState(false);
   const [benotpBuying, setBenotpBuying] = useState(false);
@@ -181,17 +181,50 @@ export default function VirtualNumbersPage() {
     loadBenotpServices();
   }, [provider, benotpPool]);
 
-  // all1 has no bulk catalog - price is looked up per service+country pair
-  // once the customer has entered both. Debounced slightly so we don't fire
-  // a request on every keystroke.
+  // Unpriced service-name directory for all1/all2 - reload when the pool
+  // or (for all2, which supports a country filter) country changes.
+  useEffect(() => {
+    if (provider !== 'benotp' || (benotpPool !== 'all1' && benotpPool !== 'all2')) {
+      setBenotpDirectory([]);
+      return;
+    }
+
+    const loadDirectory = async () => {
+      try {
+        setBenotpDirectoryLoading(true);
+        const params = new URLSearchParams({ pool: benotpPool });
+        if (benotpPool === 'all2' && benotpCountry.trim()) params.set('country', benotpCountry.trim());
+
+        const res = await fetch(`/api/numbers/benotp/service-directory?${params.toString()}`);
+        const data = await res.json();
+
+        if (data.success && Array.isArray(data.services)) {
+          setBenotpDirectory(data.services);
+        } else {
+          setBenotpDirectory([]);
+        }
+      } catch {
+        setBenotpDirectory([]);
+      } finally {
+        setBenotpDirectoryLoading(false);
+      }
+    };
+
+    loadDirectory();
+  }, [provider, benotpPool, benotpPool === 'all2' ? benotpCountry : null]);
+
+  // all1/all2 have no *priced* bulk catalog - price is looked up per
+  // service+country pair once the customer has entered both. Debounced
+  // slightly so we don't fire a request on every keystroke.
   useEffect(() => {
     setBenotpQuote(null);
-    if (benotpPool !== 'all1' || !benotpService.trim() || !benotpCountry.trim()) return;
+    if ((benotpPool !== 'all1' && benotpPool !== 'all2') || !benotpService.trim() || !benotpCountry.trim()) return;
 
     const handle = setTimeout(async () => {
       try {
         setBenotpQuoteLoading(true);
         const params = new URLSearchParams({
+          pool: benotpPool,
           service: benotpService.trim(),
           country: benotpCountry.trim(),
         });
@@ -733,7 +766,16 @@ export default function VirtualNumbersPage() {
           <div className="bg-gray-800 border border-gray-700 p-6 rounded-xl shadow-xl">
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-300 mb-2">1. Choose a Server</label>
-              <BenotpServerGrid selected={benotpPool} onSelect={setBenotpPool} />
+              <BenotpServerGrid
+                selected={benotpPool}
+                onSelect={(p) => {
+                  setBenotpPool(p);
+                  setBenotpService('');
+                  setBenotpCountry('');
+                  setBenotpAreaCode('');
+                  setBenotpQuote(null);
+                }}
+              />
             </div>
 
             {(benotpPool === 'usa1' || benotpPool === 'usa2') ? (
@@ -764,15 +806,27 @@ export default function VirtualNumbersPage() {
             ) : (
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-gray-300 mb-2">
-                  2. Service Code (e.g. wa for WhatsApp, tg for Telegram)
+                  2. Service {benotpDirectoryLoading && <span className="text-gray-500">(loading service list...)</span>}
                 </label>
-                <input
-                  type="text"
+                <select
                   value={benotpService}
                   onChange={(e) => setBenotpService(e.target.value)}
-                  placeholder="wa"
-                  className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-[#f97316] outline-none transition"
-                />
+                  disabled={benotpDirectoryLoading || benotpDirectory.length === 0}
+                  className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-[#f97316] outline-none transition disabled:opacity-50"
+                >
+                  <option value="">
+                    {benotpDirectoryLoading ? 'Loading services...' : 'Select a service'}
+                  </option>
+                  {benotpDirectory.map((s) => (
+                    <option key={s.service} value={s.service}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-2">
+                  This pool doesn&apos;t show live prices for every service up front - pick one, enter a
+                  country below, and the exact price will show once it&apos;s available.
+                </p>
               </div>
             )}
 
@@ -789,7 +843,7 @@ export default function VirtualNumbersPage() {
               </div>
             )}
 
-            {benotpPool === 'all1' && benotpService.trim() && benotpCountry.trim() && (
+            {(benotpPool === 'all1' || benotpPool === 'all2') && benotpService.trim() && benotpCountry.trim() && (
               <div className="mb-4 p-3 rounded-lg bg-gray-700 border border-gray-600 text-sm">
                 {benotpQuoteLoading ? (
                   <span className="text-gray-400">Checking live price...</span>

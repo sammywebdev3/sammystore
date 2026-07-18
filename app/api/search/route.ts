@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAllListings } from '@/lib/accszone';
-import { getAllProducts as getHstoraProducts } from '@/lib/hstora';
+import { getAllProducts as getHstoraProducts, inferHstoraCategory } from '@/lib/hstora';
 import { japRequest } from '@/lib/jap';
 import { getMarkups, computeMarkup, toNgn } from '@/lib/pricing';
 
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
           type: 'account',
           id: `buyacc2_${p.id}`,
           name,
-          category: undefined,
+          category: inferHstoraCategory(name, p as unknown as Record<string, any>),
           price: computeMarkup(baseUnitPriceNgn, markups.accounts),
           href: `/logs/buyacc2_${p.id}`,
         });
