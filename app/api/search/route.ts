@@ -33,11 +33,11 @@ export async function GET(request: Request) {
         const baseUnitPriceUsd = parseFloat(String(listing.price));
         results.push({
           type: 'account',
-          id: `accszone_${listing.id}`,
+          id: `buyacc1_${listing.id}`,
           name,
           category,
           price: isNaN(baseUnitPriceUsd) ? 0 : computeMarkup(toNgn(baseUnitPriceUsd), markups.accounts),
-          href: `/accounts/accszone_${listing.id}`,
+          href: `/accounts/buyacc1_${listing.id}`,
         });
         if (results.filter((r) => r.type === 'account').length >= MAX_RESULTS_PER_TYPE) break;
       }

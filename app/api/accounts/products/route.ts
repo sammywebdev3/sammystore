@@ -10,7 +10,7 @@ async function fetchAccszoneProducts(markupPercent: number): Promise<{ products:
   try {
     const listings = await getAccszoneListings();
     const products = listings.map((listing: any) => ({
-      id: `accszone_${listing.id}`,
+      id: `buyacc1_${listing.id}`,
       name: listing.title,
       category: listing.subcategory?.title || listing.category?.title || 'Other',
       mainCategory: listing.category?.title || 'Other',
@@ -20,7 +20,7 @@ async function fetchAccszoneProducts(markupPercent: number): Promise<{ products:
       stock: typeof listing.available_stock === 'number' ? listing.available_stock : null,
       instructions: listing.description || null,
       video: null,
-      source: 'accszone',
+      source: 'buyacc1',
     }));
     return { products, error: null };
   } catch (error: any) {
@@ -44,6 +44,6 @@ export async function GET() {
     success: true,
     products,
     count: products.length,
-    sourceErrors: { accszone: error },
+    sourceErrors: { buyacc1: error },
   });
 }

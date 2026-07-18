@@ -432,7 +432,7 @@ export default function VirtualNumbersPage() {
                 : 'bg-gray-800 text-gray-400 border border-gray-700 hover:text-white'
             }`}
           >
-            TigerSMS
+            Server 1
           </button>
           <button
             onClick={() => setProvider('benotp')}
@@ -442,7 +442,7 @@ export default function VirtualNumbersPage() {
                 : 'bg-gray-800 text-gray-400 border border-gray-700 hover:text-white'
             }`}
           >
-            BenOTP
+            Server 2
           </button>
         </div>
 
@@ -677,7 +677,7 @@ export default function VirtualNumbersPage() {
                   type="text"
                   value={benotpCountry}
                   onChange={(e) => setBenotpCountry(e.target.value)}
-                  placeholder="e.g. 0 for Russia, 1 for USA - per BenOTP's country list"
+                  placeholder="e.g. 0 for Russia, 1 for USA - see the country list"
                   className="w-full p-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-2 focus:ring-[#f97316] outline-none transition"
                 />
               </div>

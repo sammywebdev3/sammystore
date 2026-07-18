@@ -34,9 +34,9 @@ export async function POST(request: Request) {
   const remainingItems: typeof cart.items = [];
 
   if (accountItems.length > 0) {
-    const accszoneItems = accountItems.filter((i) => String(i.productId).startsWith('accszone_'));
+    const accszoneItems = accountItems.filter((i) => String(i.productId).startsWith('buyacc1_'));
     const unknownItems = accountItems.filter(
-      (i) => !String(i.productId).startsWith('accszone_')
+      (i) => !String(i.productId).startsWith('buyacc1_')
     );
 
     for (const item of unknownItems) {
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       } catch {}
 
       for (const item of accszoneItems) {
-        const rawId = String(item.productId).replace(/^accszone_/, '');
+        const rawId = String(item.productId).replace(/^buyacc1_/, '');
         const liveListing = liveListings.find((l: any) => String(l.id) === String(rawId));
 
         if (!liveListing) {
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
             status: 'success',
             metadata: {
               productId: item.productId,
-              source: 'accszone',
+              source: 'buyacc1',
               productName: item.name,
               category: item.category || null,
               quantity: item.quantity,

@@ -7,7 +7,7 @@ import Transaction from '@/models/Transaction';
 import { getMarkups, computeMarkup, toNgn } from '@/lib/pricing';
 
 async function handleAccszonePurchase(productId: string, qty: number, coupon: string | undefined, userId: string) {
-  const rawId = productId.replace(/^accszone_/, '');
+  const rawId = productId.replace(/^buyacc1_/, '');
 
   const listings = await getAllListings();
   const listing = listings.find((l: any) => String(l.id) === String(rawId));
@@ -65,7 +65,7 @@ async function handleAccszonePurchase(productId: string, qty: number, coupon: st
       status: 'success',
       metadata: {
         productId,
-        source: 'accszone',
+        source: 'buyacc1',
         productName: listing.title,
         category: listing.subcategory?.title || listing.category?.title || null,
         quantity: qty,
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
   const idStr = String(productId);
 
   try {
-    if (idStr.startsWith('accszone_')) {
+    if (idStr.startsWith('buyacc1_')) {
       return await handleAccszonePurchase(idStr, qty, coupon, userId);
     }
     return NextResponse.json({ success: false, error: 'Unknown product source' }, { status: 400 });
