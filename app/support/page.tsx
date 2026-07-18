@@ -15,6 +15,7 @@ interface Ticket {
   messages: TicketMessage[];
   createdAt: string;
   updatedAt: string;
+  userUnread?: boolean;
 }
 
 const STATUS_LABEL: Record<Ticket['status'], string> = {
@@ -208,7 +209,14 @@ export default function SupportPage() {
   return (
     <div className="max-w-2xl mx-auto p-4 pt-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Support Tickets</h1>
+        <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            Support Tickets
+            {tickets.some((t) => t.userUnread) && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-500 text-white">
+                {tickets.filter((t) => t.userUnread).length} new
+              </span>
+            )}
+          </h1>
         <button
           onClick={() => setShowNewForm((v) => !v)}
           className="bg-[#f97316] hover:bg-[#ea580c] text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
@@ -259,10 +267,15 @@ export default function SupportPage() {
               onClick={() => openTicket(t._id)}
               className="w-full text-left bg-white border border-gray-200 rounded-xl p-4 hover:border-[#f97316] transition-colors flex items-center justify-between"
             >
-              <div>
+              <div className="flex items-center gap-2">
+                    {t.userUnread && (
+                      <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" aria-label="Unread reply" />
+                    )}
+                    <div>
                 <p className="font-semibold text-gray-800">{t.subject}</p>
                 <p className="text-xs text-gray-400 mt-1">{new Date(t.updatedAt).toLocaleString()}</p>
               </div>
+                  </div>
               <span className={`text-xs font-semibold px-3 py-1 rounded-full whitespace-nowrap ${STATUS_COLOR[t.status]}`}>
                 {STATUS_LABEL[t.status]}
               </span>
