@@ -5,7 +5,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Sending from a Resend-verified domain (sammystorelogs.com) is required for
 // production - until that's set up, Resend's sandbox will only deliver to
 // the email address you signed up with.
-const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL || 'Sammy\'s Store <onboarding@resend.dev>';
+const FROM_ADDRESS = process.env.RESEND_FROM_EMAIL || 'Sammy\'s Store <noreply@sammystorelogs.com>';
 
 async function sendEmail(to: string, subject: string, html: string) {
   if (!process.env.RESEND_API_KEY) {
