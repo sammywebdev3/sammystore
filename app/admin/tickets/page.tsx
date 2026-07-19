@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -33,6 +33,14 @@ const STATUS_COLOR: Record<Ticket['status'], string> = {
 };
 
 export default function AdminTicketsPage() {
+  return (
+    <Suspense fallback={<div className="max-w-3xl mx-auto p-4 pt-8 text-gray-500 text-sm">Loading tickets...</div>}>
+      <AdminTicketsPageInner />
+    </Suspense>
+  );
+}
+
+function AdminTicketsPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tickets, setTickets] = useState<Ticket[]>([]);
