@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
-import { purchaseListing, getAllListings } from '@/lib/accszone';
+import { getAllProducts, purchaseProduct } from '@/lib/benotp-accounts';
 import { getUserId } from '@/lib/auth';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import { getMarkups, computeMarkup, toNgn } from '@/lib/pricing';
 
-// buyacc1 (AccsZone) only now - buyacc2 (HStora) purchases go through
-// /api/logs/buy instead, matching the /accounts vs /logs page split.
+// buyacc1 (BenOTP) - buyacc2 (HStora) purchases go through /api/logs/buy
+// instead, matching the /accounts vs /logs page split.
 export async function POST(request: Request) {
   await dbConnect();
   const userId = getUserId(request);
@@ -31,19 +31,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Your account is suspended. Contact support.' }, { status: 403 });
   }
 
-  const listings = await getAllListings();
+  const listings = await getAllProducts();
   const listing = listings.find((l: any) => String(l.id) === String(rawId));
 
   if (!listing) {
     return NextResponse.json({ success: false, error: 'Product not found' }, { status: 400 });
   }
 
-  if (typeof listing.available_stock === 'number' && listing.available_stock <= 0) {
+  const stock = listing.amount !== undefined && listing.amount !== null ? parseInt(String(listing.amount), 10) : null;
+  if (typeof stock === 'number' && stock <= 0) {
     return NextResponse.json({ success: false, error: 'This product is out of stock' }, { status: 400 });
   }
-  if (typeof listing.available_stock === 'number' && qty > listing.available_stock) {
+  if (typeof stock === 'number' && qty > stock) {
     return NextResponse.json(
-      { success: false, error: `Only ${listing.available_stock} available - please lower the quantity` },
+      { success: false, error: `Only ${stock} available - please lower the quantity` },
       { status: 400 }
     );
   }
@@ -68,24 +69,31 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await purchaseListing(rawId, qty, coupon || undefined);
+    const result = await purchaseProduct(rawId, qty, coupon || undefined);
 
-    const accountData =
-      result.accounts.length === 1
-        ? { Account: result.accounts[0] }
-        : Object.fromEntries(result.accounts.map((acc, i) => [`Account ${i + 1}`, acc]));
+    // Response shape for buyProduct isn't documented with an example yet -
+    // being lenient about where delivered account data lives until a real
+    // response is captured and this can be tightened.
+    const delivered = result?.data ?? result?.accounts ?? null;
+    const accountData = Array.isArray(delivered)
+      ? (delivered.length === 1
+          ? { Account: delivered[0] }
+          : Object.fromEntries(delivered.map((acc: any, i: number) => [`Account ${i + 1}`, acc])))
+      : delivered && typeof delivered === 'object'
+      ? delivered
+      : { Account: delivered };
 
     const txn = await Transaction.create({
       userId,
       type: 'account_purchase',
-      description: `Bought ${qty} x ${listing.title}`,
+      description: `Bought ${qty} x ${listing.name}`,
       amount: cost,
       status: 'success',
       metadata: {
         productId,
         source: 'buyacc1',
-        productName: listing.title,
-        category: listing.subcategory?.title || listing.category?.title || null,
+        productName: listing.name,
+        category: listing.categoryName || null,
         quantity: qty,
         accountData,
       },
@@ -100,7 +108,7 @@ export async function POST(request: Request) {
     });
   } catch (providerError: any) {
     await User.findByIdAndUpdate(userId, { $inc: { walletBalance: cost } });
-    console.error('AccsZone purchase failed:', providerError?.message || providerError);
+    console.error('BenOTP purchase failed:', providerError?.message || providerError);
     return NextResponse.json(
       { success: false, error: 'This item could not be delivered right now - your wallet has been refunded.' },
       { status: 400 }
