@@ -49,13 +49,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const baseUnitPriceUsd = parseFloat(String(listing.price));
-  if (isNaN(baseUnitPriceUsd) || baseUnitPriceUsd <= 0) {
+  const baseUnitPriceNgn = parseFloat(String(listing.price));
+  if (isNaN(baseUnitPriceNgn) || baseUnitPriceNgn <= 0) {
     return NextResponse.json({ success: false, error: 'Invalid product price' }, { status: 500 });
   }
 
   const markups = await getMarkups();
-  const unitPrice = computeMarkup(toNgn(baseUnitPriceUsd), markups.accounts);
+  const unitPrice = computeMarkup(baseUnitPriceNgn, markups.accounts);
   const cost = unitPrice * qty;
 
   const debited = await User.findOneAndUpdate(
