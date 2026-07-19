@@ -19,7 +19,7 @@ export async function GET() {
       name: listing.name,
       category: listing.categoryName || 'Other',
       mainCategory: listing.categoryName || 'Other',
-      price: computeMarkup(toNgn(parseFloat(listing.price) || 0), markups.accounts),
+      price: computeMarkup(toNgn(parseFloat(String(listing.price)) || 0), markups.accounts),
       // BenOTP's `amount` field on each product IS the stock count.
       stock: listing.amount !== undefined && listing.amount !== null ? parseInt(String(listing.amount), 10) : null,
       instructions: listing.description || null,
