@@ -32,6 +32,7 @@ const transactionSchema = new Schema<ITransaction>({
       'admin_debit',       // app/api/admin/deduct-money
       'smm',               // app/api/smm/order, app/api/cart/checkout (smm items)
       'wallet_fund',       // app/api/wallet/fund-paystack, verify-paystack
+      'welcome_bonus',     // app/api/wallet/verify-paystack (first-deposit bonus)
       'virtual_number',    // app/api/numbers/tiger/buy, dashboard/stats
     ]
   },

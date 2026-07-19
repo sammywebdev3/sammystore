@@ -10,6 +10,10 @@ import { getUserId } from '@/lib/auth';
 // NOT proof of payment (anyone can hit this URL manually). We only trust
 // Paystack's own server-to-server verification response, and we only credit
 // the wallet once per reference no matter how many times this is called.
+
+// One-time welcome bonus credited on a user's first successful deposit.
+const WELCOME_BONUS_AMOUNT = 500;
+
 export async function POST(request: Request) {
   try {
     await dbConnect();
@@ -86,7 +90,53 @@ export async function POST(request: Request) {
       { new: true }
     );
 
-    return NextResponse.json({ success: true, newBalance: user?.walletBalance ?? 0 });
+    // Welcome bonus: credited once, only on the user's first-ever successful
+    // deposit. We count successful wallet_fund transactions AFTER this one
+    // was marked success above, so a count of exactly 1 means this deposit
+    // is the first - any earlier deposit means the bonus was already given
+    // (or never applicable) and we skip it.
+    let bonusAwarded = false;
+    let finalBalance = user?.walletBalance ?? 0;
+
+    const successfulDepositCount = await Transaction.countDocuments({
+      userId,
+      type: 'wallet_fund',
+      status: 'success',
+    });
+
+    if (successfulDepositCount === 1) {
+      // Guard against double-award: create the bonus transaction first with
+      // a deterministic reference tied to this user, so a concurrent/retried
+      // request can't create two bonus transactions (unique+sparse index on
+      // `reference` rejects the second insert).
+      try {
+        await Transaction.create({
+          userId,
+          type: 'welcome_bonus',
+          description: 'Welcome bonus for first deposit',
+          amount: WELCOME_BONUS_AMOUNT,
+          status: 'success',
+          reference: `welcome-bonus-${userId}`,
+        });
+
+        const bonusedUser = await User.findByIdAndUpdate(
+          userId,
+          { $inc: { walletBalance: WELCOME_BONUS_AMOUNT } },
+          { new: true }
+        );
+
+        bonusAwarded = true;
+        finalBalance = bonusedUser?.walletBalance ?? finalBalance;
+      } catch (bonusError: any) {
+        // Duplicate key error (E11000) means the bonus was already awarded
+        // by a concurrent request - safe to ignore, not a real failure.
+        if (bonusError?.code !== 11000) {
+          console.error('Welcome bonus error:', bonusError.message);
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true, newBalance: finalBalance, bonusAwarded });
   } catch (error: any) {
     console.error('Paystack verify error:', error.response?.data || error.message);
     return NextResponse.json({ success: false, error: 'Verification failed' }, { status: 500 });
