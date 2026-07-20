@@ -62,9 +62,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // Fire-and-forget: don't let a slow/failed email delay or break the
   // reply response - the ticket update above already succeeded. Only
   // notify when an actual reply was added, not on a status-only change.
-  if (message?.trim() && ticket.userId?.email) {
+  const ticketUser = ticket.userId as any;
+  if (message?.trim() && ticketUser?.email) {
     sendTicketReplyEmail({
-      to: ticket.userId.email,
+      to: ticketUser.email,
       subject: ticket.subject,
       message: message.trim(),
     }).catch((err) => console.error('Ticket reply email failed:', err));
