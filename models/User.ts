@@ -9,6 +9,8 @@ export interface IUser extends Document {
   walletBalance: number;
   suspended: boolean;
   suspendReason?: string;
+  referralCode: string;
+  referredBy?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -23,6 +25,8 @@ const UserSchema: Schema<IUser> = new Schema(
     walletBalance: { type: Number, default: 0 },
     suspended: { type: Boolean, default: false },
     suspendReason: { type: String, default: '' },
+    referralCode: { type: String, unique: true, sparse: true },
+    referredBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   },
   { timestamps: true }
 );
@@ -33,6 +37,12 @@ const UserSchema: Schema<IUser> = new Schema(
 // pass a PLAIN TEXT password and let this hook hash it - hashing it again
 // before calling .create()/.save() would double-hash it and break login.
 UserSchema.pre('save', async function () {
+  if (!this.referralCode) {
+    // Short, URL-friendly code generated once per user - collisions are
+    // astronomically unlikely at this length but the unique index will
+    // reject a duplicate insert if it ever happens.
+    this.referralCode = require('crypto').randomBytes(4).toString('hex');
+  }
   if (!this.isModified('password')) return;
   this.password = await bcrypt.hash(this.password, 10);
 });
