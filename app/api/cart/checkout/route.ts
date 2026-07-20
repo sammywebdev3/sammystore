@@ -23,6 +23,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Your account is suspended. Contact support.' }, { status: 403 });
   }
 
+  // Coupon (if any) is applied at the very end as a wallet credit once we
+  // know how much was actually spent - see the bottom of this function.
+  let couponCode: string | undefined;
+  try {
+    const body = await request.clone().json();
+    couponCode = body?.couponCode ? String(body.couponCode).trim() : undefined;
+  } catch {}
+  const startingBalance = user.walletBalance;
+
   const cart = await Cart.findOne({ userId });
   if (!cart || cart.items.length === 0) {
     return NextResponse.json({ success: false, error: 'Your cart is empty' }, { status: 400 });
@@ -300,13 +309,41 @@ export async function POST(request: Request) {
   cart.items = remainingItems;
   await cart.save();
 
-  const finalUser = await User.findById(userId);
+  let finalUser = await User.findById(userId);
   const allSucceeded = results.every((r) => r.success);
+
+  let couponApplied: { code: string; discountAmount: number } | null = null;
+  const anySucceeded = results.some((r) => r.success);
+  if (couponCode && anySucceeded && finalUser) {
+    const totalSpent = startingBalance - finalUser.walletBalance;
+    if (totalSpent > 0) {
+      const { validateCoupon, markCouponRedeemed } = await import('@/lib/coupon');
+      const validation = await validateCoupon(couponCode, userId, totalSpent);
+      if (validation.valid && validation.coupon && validation.discountAmount) {
+        finalUser = await User.findByIdAndUpdate(
+          userId,
+          { $inc: { walletBalance: validation.discountAmount } },
+          { new: true }
+        );
+        await Transaction.create({
+          userId,
+          type: 'coupon_discount',
+          description: `Coupon ${validation.coupon.code} applied`,
+          amount: validation.discountAmount,
+          status: 'success',
+          metadata: { couponCode: validation.coupon.code },
+        });
+        await markCouponRedeemed(validation.coupon._id);
+        couponApplied = { code: validation.coupon.code, discountAmount: validation.discountAmount };
+      }
+    }
+  }
 
   return NextResponse.json({
     success: allSucceeded,
     partial: !allSucceeded && results.some((r) => r.success),
     results,
     newBalance: finalUser?.walletBalance ?? null,
+    couponApplied,
   });
 }

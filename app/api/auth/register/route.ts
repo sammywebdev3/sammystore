@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, email, password } = body;
+    const { name, email, password, ref } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: 'Please fill all fields' }, { status: 400 });
@@ -47,12 +47,21 @@ export async function POST(request: Request) {
     // Pass the PLAIN password - the schema's pre('save') hook hashes it
     // exactly once. Hashing it here too would double-hash it, which would
     // make login fail even with the correct password.
+    // A bad/unknown ref code should never block signup - just skip linking
+    // the referrer rather than failing the whole registration.
+    let referredBy = null;
+    if (ref && typeof ref === 'string') {
+      const referrer = await User.findOne({ referralCode: ref.trim() });
+      if (referrer) referredBy = referrer._id;
+    }
+
     const newUser = await User.create({
       name,
       email: String(email).toLowerCase().trim(),
       password,
       apiKey,
-      walletBalance: 0
+      walletBalance: 0,
+      referredBy
     });
 
     return NextResponse.json({

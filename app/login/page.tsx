@@ -7,6 +7,8 @@ import Logo from '@/components/Logo';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [needsTwoFactor, setNeedsTwoFactor] = useState(false);
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -19,10 +21,13 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, twoFactorCode: twoFactorCode || undefined })
       });
       const data = await res.json();
-      if (data.success) {
+      if (data.requiresTwoFactor) {
+        setNeedsTwoFactor(true);
+        setMsg('Enter the 6-digit code from your authenticator app');
+      } else if (data.success) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         router.push('/dashboard');
@@ -52,8 +57,23 @@ export default function LoginPage() {
             <label className="block text-gray-700 text-sm font-semibold mb-2">Password</label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-field" required />
           </div>
+          {needsTwoFactor && (
+            <div>
+              <label className="block text-gray-700 text-sm font-semibold mb-2">Authentication Code</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={twoFactorCode}
+                onChange={(e) => setTwoFactorCode(e.target.value)}
+                className="input-field"
+                placeholder="6-digit code"
+                autoFocus
+              />
+            </div>
+          )}
           <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-50">
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Logging in...' : needsTwoFactor ? 'Verify Code' : 'Login'}
           </button>
         </form>
         {msg && <p className="mt-4 text-center text-red-600 text-sm font-semibold">{msg}</p>}

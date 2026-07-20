@@ -9,7 +9,15 @@ export default function Footer() {
       <div className="max-w-5xl mx-auto px-4 py-8 flex flex-col items-center gap-6">
           <Logo variant="stacked" />
           <div className="w-full flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} SammyStore. All rights reserved.</p>
+        <div className="flex flex-col items-center sm:items-start gap-2">
+            <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} SammyStore. All rights reserved.</p>
+            <div className="flex items-center gap-4 text-xs text-gray-500">
+              <a href="/terms" className="hover:text-gray-700 transition-colors">Terms of Service</a>
+              <a href="/privacy" className="hover:text-gray-700 transition-colors">Privacy Policy</a>
+              <a href="/refund-policy" className="hover:text-gray-700 transition-colors">Refund Policy</a>
+              <a href="/faq" className="hover:text-gray-700 transition-colors">How to Buy / FAQ</a>
+            </div>
+          </div>
         <div className="flex items-center gap-4">
             <a
               href={TELEGRAM_URL}

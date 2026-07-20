@@ -43,6 +43,19 @@ export async function POST(request: Request) {
   }
 
   // Check if user is suspended
+    // 2FA check happens after password verification (so we don't leak
+    // "this account has 2FA" to someone who doesn't already know the
+    // correct password) but before suspension/token issuance.
+    if (user.twoFactorEnabled) {
+      if (!twoFactorCode) {
+        return NextResponse.json({ requiresTwoFactor: true }, { status: 200 });
+      }
+      const validCode = authenticator.verify({ token: String(twoFactorCode), secret: user.twoFactorSecret! });
+      if (!validCode) {
+        return NextResponse.json({ error: 'Invalid 2FA code' }, { status: 401 });
+      }
+    }
+
   if (user.suspended) {
     return NextResponse.json(
       { error: `Account suspended. Reason: ${user.suspendReason || 'No reason provided'}` },

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Ticket from '@/models/Ticket';
 import { verifyAdmin } from '@/lib/adminAuth';
+import { sendTicketReplyEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +39,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const { message, status } = await request.json();
 
-  const ticket = await Ticket.findById(id);
+  const ticket = await Ticket.findById(id).populate('userId', 'name email');
   if (!ticket) {
     return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
   }
@@ -57,5 +58,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   await ticket.save();
+
+  // Fire-and-forget: don't let a slow/failed email delay or break the
+  // reply response - the ticket update above already succeeded. Only
+  // notify when an actual reply was added, not on a status-only change.
+  if (message?.trim() && ticket.userId?.email) {
+    sendTicketReplyEmail({
+      to: ticket.userId.email,
+      subject: ticket.subject,
+      message: message.trim(),
+    }).catch((err) => console.error('Ticket reply email failed:', err));
+  }
+
   return NextResponse.json({ success: true, ticket });
 }

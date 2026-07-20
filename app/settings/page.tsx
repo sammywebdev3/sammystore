@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import Sidebar from '@/components/Sidebar';
+import TwoFactorSection from '@/components/TwoFactorSection';
 
 interface Profile {
   name: string;
@@ -289,6 +290,15 @@ export default function SettingsPage() {
               </div>
               {keyMsg && <p className="mt-3 text-sm font-semibold text-gray-600">{keyMsg}</p>}
             </div>
+          </div>
+
+          {/* Two-Factor Authentication */}
+          <div className="card p-6 mb-6">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Two-Factor Authentication</h2>
+            <p className="text-gray-500 text-sm mb-4">
+              Add an extra layer of security using an authenticator app (Google Authenticator, Authy, etc).
+            </p>
+            <TwoFactorSection />
           </div>
 
           {/* Danger zone / logout */}

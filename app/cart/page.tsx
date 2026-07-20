@@ -27,6 +27,8 @@ export default function CartPage() {
   const [checkingOut, setCheckingOut] = useState(false);
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState<'success' | 'error' | ''>('');
+  const [couponCode, setCouponCode] = useState('');
+  const [couponResult, setCouponResult] = useState<{ code: string; discountAmount: number } | null>(null);
 
   const fetchCart = async () => {
     const token = localStorage.getItem('token');
@@ -79,9 +81,14 @@ export default function CartPage() {
     try {
       const res = await fetch('/api/cart/checkout', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ couponCode: couponCode.trim() || undefined }),
       });
       const data = await res.json();
+
+      if (data.couponApplied) {
+        setCouponResult(data.couponApplied);
+      }
 
       if (data.success) {
         setMsg('All items purchased successfully! Check your orders.');
@@ -198,6 +205,32 @@ export default function CartPage() {
                     ₦{total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                   </p>
                 </div>
+            
+              href="/refund-policy"
+              className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg p-3 mb-4 hover:bg-gray-100 transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-none stroke-[#f97316] stroke-2 flex-shrink-0" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span>Failed delivery is auto-refunded to your wallet - see our Refund Policy</span>
+            </a>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Coupon Code</label>
+              <input
+                type="text"
+                value={couponCode}
+                onChange={(e) => setCouponCode(e.target.value)}
+                placeholder="Enter coupon code"
+                className="input-field"
+              />
+              {couponResult && (
+                <p className="text-xs text-green-700 mt-1">
+                  Coupon {couponResult.code} applied - discount credited to your wallet
+                </p>
+              )}
+            </div>
+
                 <button
                   onClick={handleCheckout}
                   disabled={checkingOut}

@@ -5,6 +5,7 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import { getMarkups, computeMarkup, toNgn } from '@/lib/pricing';
+import { sendOrderConfirmationEmail } from '@/lib/email';
 import crypto from 'crypto';
 
 export async function POST(request: Request) {
@@ -100,6 +101,16 @@ export async function POST(request: Request) {
         accountData,
       },
     });
+
+    // Fire-and-forget: don't let a slow/failed email delay or break the
+    // purchase response - the debit and delivery above already succeeded.
+    sendOrderConfirmationEmail({
+      to: user.email,
+      productName: product.name,
+      quantity: qty,
+      amount: cost,
+      orderId: String(txn._id),
+    }).catch((err) => console.error('Order confirmation email failed:', err));
 
     return NextResponse.json({
       success: true,

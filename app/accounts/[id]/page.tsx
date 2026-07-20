@@ -254,6 +254,16 @@ export default function AccountDetailPage() {
                 </div>
               </div>
 
+            
+              href="/refund-policy"
+              className="flex items-center gap-2 text-xs text-gray-600 bg-gray-50 rounded-lg p-3 mb-4 hover:bg-gray-100 transition-colors"
+            >
+              <svg viewBox="0 0 24 24" className="w-4 h-4 fill-none stroke-[#f97316] stroke-2 flex-shrink-0" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span>Failed delivery is auto-refunded to your wallet - see our Refund Policy</span>
+            </a>
+
               {outOfStock ? (
                 <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm font-semibold text-center">
                   This product is currently out of stock

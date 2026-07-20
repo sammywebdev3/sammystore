@@ -167,6 +167,14 @@ export default function DashboardPage() {
             </div>
 
             <div className="card p-6">
+              <h3 className="text-gray-500 text-sm font-semibold mb-2">Refer Friends</h3>
+              <p className="text-sm text-gray-600 mb-4">Earn ₦500 per referral</p>
+              <Link href="/referrals" className="btn-primary text-sm py-2 px-4 inline-block">
+                View Referral Link
+              </Link>
+            </div>
+
+            <div className="card p-6">
               <h3 className="text-gray-500 text-sm font-semibold mb-2">Total Transactions</h3>
               <p className="text-3xl md:text-4xl font-bold text-gray-800">{totalTransactions}</p>
             </div>
