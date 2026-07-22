@@ -27,9 +27,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { subject, message } = await request.json();
+  const { subject, message, attachmentUrl } = await request.json();
   if (!subject?.trim() || !message?.trim()) {
     return NextResponse.json({ error: 'Subject and message are required' }, { status: 400 });
+  }
+
+  // Attachments are optional screenshots (e.g. payment proof), sent as a
+  // base64 data URI. Validate type/size server-side too, since the client
+  // check can be bypassed.
+  let cleanAttachment: string | undefined;
+  if (attachmentUrl) {
+    const isImageDataUri = /^data:image\/(png|jpe?g|webp|gif);base64,/.test(attachmentUrl);
+    const approxBytes = (attachmentUrl.length * 3) / 4;
+    if (!isImageDataUri) {
+      return NextResponse.json({ error: 'Attachment must be an image' }, { status: 400 });
+    }
+    if (approxBytes > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Attachment must be under 5MB' }, { status: 400 });
+    }
+    cleanAttachment = attachmentUrl;
   }
 
   try {
@@ -37,11 +53,11 @@ export async function POST(request: Request) {
       userId,
       subject: subject.trim(),
       status: 'pending',
-      messages: [{ sender: 'user', message: message.trim() }],
+      messages: [{ sender: 'user', message: message.trim(), attachmentUrl: cleanAttachment }],
     });
 
     sendTelegramMessage(
-      `🆕 <b>New support ticket</b>\n<b>Subject:</b> ${subject.trim()}\n<b>Message:</b> ${message.trim().slice(0, 300)}`
+      `🆕 <b>New support ticket</b>\n<b>Subject:</b> ${subject.trim()}\n<b>Message:</b> ${message.trim().slice(0, 300)}${cleanAttachment ? '\n📎 Screenshot attached (view in admin panel)' : ''}`
     );
 
     return NextResponse.json({ success: true, ticket });

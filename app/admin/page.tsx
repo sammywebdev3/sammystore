@@ -239,6 +239,9 @@ export default function AdminPage() {
               <Link href="/admin/tickets" className="px-6 py-3 bg-white border-2 border-[#f97316] rounded-lg font-bold text-[#f97316] hover:bg-orange-50 transition-all">
                 {'> TICKETS'}
               </Link>
+              <Link href="/admin/announcements" className="px-6 py-3 bg-white border-2 border-[#f97316] rounded-lg font-bold text-[#f97316] hover:bg-orange-50 transition-all">
+                {'> ANNOUNCEMENTS'}
+              </Link>
               <Link href="/admin/catalog" className="px-6 py-3 bg-white border-2 border-[#f97316] rounded-lg font-bold text-[#f97316] hover:bg-orange-50 transition-all">
                 {'> MY_CATALOG'}
               </Link>

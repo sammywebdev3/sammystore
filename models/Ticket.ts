@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface ITicketMessage {
   sender: 'user' | 'admin';
   message: string;
+  attachmentUrl?: string;
   createdAt: Date;
 }
 
@@ -21,6 +22,10 @@ const TicketMessageSchema = new Schema<ITicketMessage>(
   {
     sender: { type: String, enum: ['user', 'admin'], required: true },
     message: { type: String, required: true },
+    // Optional payment-proof screenshot, stored as a base64 data URI.
+    // Kept small (client enforces a size cap) since it lives inline on
+    // the document rather than in separate file storage.
+    attachmentUrl: { type: String },
   },
   { timestamps: { createdAt: true, updatedAt: false } }
 );

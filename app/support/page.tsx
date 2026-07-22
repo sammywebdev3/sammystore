@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 interface TicketMessage {
   sender: 'user' | 'admin';
   message: string;
+  attachmentUrl?: string;
   createdAt: string;
 }
 
@@ -176,6 +177,15 @@ export default function SupportPage() {
               >
                 <p className="text-xs text-gray-500 mb-1">{m.sender === 'admin' ? 'Support' : 'You'}</p>
                 <p className="text-sm text-gray-800 whitespace-pre-wrap">{m.message}</p>
+                {m.attachmentUrl && (
+                  <a href={m.attachmentUrl} target="_blank" rel="noopener noreferrer" className="inline-block mt-2">
+                    <img
+                      src={m.attachmentUrl}
+                      alt="Attachment"
+                      className="max-w-[200px] max-h-[200px] rounded-lg border border-gray-300"
+                    />
+                  </a>
+                )}
               </div>
             ))}
           </div>
