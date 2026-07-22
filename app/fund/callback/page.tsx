@@ -25,18 +25,12 @@ function CallbackInner() {
       return;
     }
 
-    // References are prefixed by the gateway that created them
-    // (SAMMY-NP-... for NeuraPay, SAMMY-... for Paystack) so we know which
-    // verify endpoint to call without an extra lookup.
-    const verifyEndpoint = reference.startsWith('SAMMY-NP-')
-      ? '/api/wallet/verify-neurapay'
-      : '/api/wallet/verify-paystack';
+    // This callback page is only reached via Paystack's hosted-checkout
+    // redirect. NeuraPay virtual accounts don't redirect anywhere - that
+    // flow is confirmed on the /fund page itself (webhook + manual check).
+    setMessage('Confirming your payment with Paystack...');
 
-    setMessage(reference.startsWith('SAMMY-NP-')
-      ? 'Confirming your payment with NeuraPay...'
-      : 'Confirming your payment with Paystack...');
-
-    fetch(verifyEndpoint, {
+    fetch('/api/wallet/verify-paystack', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
