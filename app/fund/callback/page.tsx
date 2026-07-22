@@ -26,14 +26,14 @@ function CallbackInner() {
     }
 
     // References are prefixed by the gateway that created them
-    // (SAMMY-PF-... for Pocketfi, SAMMY-... for Paystack) so we know which
+    // (SAMMY-NP-... for NeuraPay, SAMMY-... for Paystack) so we know which
     // verify endpoint to call without an extra lookup.
-    const verifyEndpoint = reference.startsWith('SAMMY-PF-')
-      ? '/api/wallet/verify-pocketfi'
+    const verifyEndpoint = reference.startsWith('SAMMY-NP-')
+      ? '/api/wallet/verify-neurapay'
       : '/api/wallet/verify-paystack';
 
-    setMessage(reference.startsWith('SAMMY-PF-')
-      ? 'Confirming your payment with Pocketfi...'
+    setMessage(reference.startsWith('SAMMY-NP-')
+      ? 'Confirming your payment with NeuraPay...'
       : 'Confirming your payment with Paystack...');
 
     fetch(verifyEndpoint, {

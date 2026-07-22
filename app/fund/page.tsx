@@ -7,7 +7,7 @@ import Sidebar from '@/components/Sidebar';
 // Paystack is temporarily paused (compliance flag on the account).
 // Flip this back to true once Paystack is reactivated.
 const PAYSTACK_ENABLED = false;
-const POCKETFI_ENABLED = true;
+const NEURAPAY_ENABLED = true;
 
 const BANK_DETAILS = {
   bank: 'United Bank of Africa (UBA)',
@@ -21,9 +21,9 @@ export default function FundPage() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState('');
-  const [pocketfiLoading, setPocketfiLoading] = useState(false);
-  const [pocketfiMsg, setPocketfiMsg] = useState('');
-  const [pocketfiMsgType, setPocketfiMsgType] = useState('');
+  const [neurapayLoading, setNeurapayLoading] = useState(false);
+  const [neurapayMsg, setNeurapayMsg] = useState('');
+  const [neurapayMsgType, setNeurapayMsgType] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
   const [manualMsg, setManualMsg] = useState('');
   const [manualMsgType, setManualMsgType] = useState('');
@@ -85,20 +85,20 @@ export default function FundPage() {
     setLoading(false);
   };
 
-  const handlePocketfiFund = async () => {
-    setPocketfiLoading(true);
-    setPocketfiMsg('');
+  const handleNeurapayFund = async () => {
+    setNeurapayLoading(true);
+    setNeurapayMsg('');
 
     const token = localStorage.getItem('token');
     if (!token) {
-      setPocketfiMsgType('error');
-      setPocketfiMsg('Please login to fund your wallet');
-      setPocketfiLoading(false);
+      setNeurapayMsgType('error');
+      setNeurapayMsg('Please login to fund your wallet');
+      setNeurapayLoading(false);
       return;
     }
 
     try {
-      const res = await fetch('/api/wallet/fund-pocketfi', {
+      const res = await fetch('/api/wallet/fund-neurapay', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -109,19 +109,19 @@ export default function FundPage() {
       const data = await res.json();
 
       if (data.success && data.url) {
-        // Send the user to Pocketfi's hosted checkout. They'll be brought
+        // Send the user to NeuraPay's hosted checkout. They'll be brought
         // back to /fund/callback afterwards, which verifies and credits.
         window.location.href = data.url;
         return;
       } else {
-        setPocketfiMsgType('error');
-        setPocketfiMsg(data.error || 'Failed to start payment');
+        setNeurapayMsgType('error');
+        setNeurapayMsg(data.error || 'Failed to start payment');
       }
     } catch (error: any) {
-      setPocketfiMsgType('error');
-      setPocketfiMsg('Network error: ' + error.message);
+      setNeurapayMsgType('error');
+      setNeurapayMsg('Network error: ' + error.message);
     }
-    setPocketfiLoading(false);
+    setNeurapayLoading(false);
   };
 
   const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024; // 5MB
@@ -265,22 +265,22 @@ export default function FundPage() {
             )}
 
             <button
-              onClick={handlePocketfiFund}
-              disabled={!POCKETFI_ENABLED || pocketfiLoading || !amount}
+              onClick={handleNeurapayFund}
+              disabled={!NEURAPAY_ENABLED || neurapayLoading || !amount}
               className="btn-primary w-full disabled:opacity-50 mt-3"
             >
-              {!POCKETFI_ENABLED
-                ? 'Pocketfi Temporarily Unavailable'
-                : pocketfiLoading
-                  ? 'Redirecting to Pocketfi...'
-                  : 'Pay with Pocketfi'}
+              {!NEURAPAY_ENABLED
+                ? 'NeuraPay Temporarily Unavailable'
+                : neurapayLoading
+                  ? 'Redirecting to NeuraPay...'
+                  : 'Pay with NeuraPay'}
             </button>
 
-            {pocketfiMsg && (
+            {neurapayMsg && (
               <div className={`mt-6 p-4 rounded-xl ${
-                pocketfiMsgType === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                neurapayMsgType === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
               }`}>
-                <p className="font-semibold">{pocketfiMsg}</p>
+                <p className="font-semibold">{neurapayMsg}</p>
               </div>
             )}
           </div>

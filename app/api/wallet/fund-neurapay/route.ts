@@ -6,7 +6,7 @@ import User from '@/models/User';
 import Transaction from '@/models/Transaction';
 import { getUserId } from '@/lib/auth';
 
-const POCKETFI_BASE_URL = 'https://api.pocketfi.ng/api/v1';
+const NEURAPAY_BASE_URL = 'https://neurapay.com.ng/api/v1';
 
 export async function POST(request: Request) {
   try {
@@ -31,21 +31,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Invalid amount' }, { status: 400 });
     }
 
-    const secretKey = process.env.POCKETFI_SECRET_KEY;
+    const secretKey = process.env.NEURAPAY_SECRET_KEY;
     if (!secretKey) {
-      return NextResponse.json({ success: false, error: 'Pocketfi is not configured' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'NeuraPay is not configured' }, { status: 500 });
+    }
+
+    const businessId = process.env.NEURAPAY_BUSINESS_ID;
+    if (!businessId) {
+      return NextResponse.json({ success: false, error: 'NeuraPay is not configured' }, { status: 500 });
     }
 
     // Unique, hard-to-guess reference so we can verify this exact transaction
-    // later and so two initializations never collide. Prefixed with "PF" so
+    // later and so two initializations never collide. Prefixed with "NP" so
     // the fund callback page can tell at a glance which gateway to verify
     // against without needing an extra DB round trip.
-    const reference = `SAMMY-PF-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    const reference = `SAMMY-NP-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin;
 
-    const response = await axios.post(`${POCKETFI_BASE_URL}/payment/initialize`, {
-      amount: Math.round(validAmount * 100), // Pocketfi uses kobo
+    const response = await axios.post(`${NEURAPAY_BASE_URL}/payment/initialize`, {
+      business_id: businessId,
+      amount: Math.round(validAmount * 100), // NeuraPay uses kobo
       currency: 'NGN',
       email: user.email,
       reference,
@@ -55,13 +61,13 @@ export async function POST(request: Request) {
       headers: { Authorization: `Bearer ${secretKey}`, 'Content-Type': 'application/json' }
     });
 
-    // Record a pending transaction now so verify-pocketfi has something to
+    // Record a pending transaction now so verify-neurapay has something to
     // check against - this is what stops anyone from crediting a wallet
-    // without an actual successful Pocketfi payment.
+    // without an actual successful NeuraPay payment.
     await Transaction.create({
       userId: user._id,
       type: 'wallet_fund',
-      description: `Wallet funding via Pocketfi (₦${validAmount})`,
+      description: `Wallet funding via NeuraPay (₦${validAmount})`,
       amount: validAmount,
       status: 'pending',
       activationId: reference
@@ -73,7 +79,7 @@ export async function POST(request: Request) {
       reference
     });
   } catch (error: any) {
-    console.error('Pocketfi init error:', error.response?.data || error.message);
+    console.error('NeuraPay init error:', error.response?.data || error.message);
     return NextResponse.json({ success: false, error: 'Payment initialization failed' }, { status: 500 });
   }
 }

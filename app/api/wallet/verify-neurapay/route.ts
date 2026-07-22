@@ -6,13 +6,13 @@ import Transaction from '@/models/Transaction';
 import { getUserId } from '@/lib/auth';
 import { sendWalletFundedEmail } from '@/lib/email';
 
-// Completes a Pocketfi funding flow. Pocketfi redirects the user back to
+// Completes a NeuraPay funding flow. NeuraPay redirects the user back to
 // our callback page with the reference in the URL, but a redirect alone is
 // NOT proof of payment (anyone can hit this URL manually). We only trust
-// Pocketfi's own server-to-server verification response, and we only credit
+// NeuraPay's own server-to-server verification response, and we only credit
 // the wallet once per reference no matter how many times this is called.
 
-const POCKETFI_BASE_URL = 'https://api.pocketfi.ng/api/v1';
+const NEURAPAY_BASE_URL = 'https://neurapay.com.ng/api/v1';
 
 // One-time welcome bonus credited on a user's first successful deposit.
 const WELCOME_BONUS_AMOUNT = 500;
@@ -31,9 +31,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Reference required' }, { status: 400 });
     }
 
-    const secretKey = process.env.POCKETFI_SECRET_KEY;
+    const secretKey = process.env.NEURAPAY_SECRET_KEY;
     if (!secretKey) {
-      return NextResponse.json({ success: false, error: 'Pocketfi is not configured' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'NeuraPay is not configured' }, { status: 500 });
     }
 
     // The pending transaction we created at initialization time. Scoping the
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, alreadyProcessed: true, newBalance: user?.walletBalance ?? 0 });
     }
 
-    const verifyRes = await axios.get(`${POCKETFI_BASE_URL}/payment/verify/${encodeURIComponent(reference)}`, {
+    const verifyRes = await axios.get(`${NEURAPAY_BASE_URL}/payment/verify/${encodeURIComponent(reference)}`, {
       headers: { Authorization: `Bearer ${secretKey}` }
     });
 
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     }
 
     // Guard against a tampered/mismatched amount - only credit exactly what
-    // Pocketfi confirms was actually paid for this reference. If Pocketfi's
+    // NeuraPay confirms was actually paid for this reference. If NeuraPay's
     // response doesn't include an amount field, fail closed rather than
     // silently skip the check.
     if (typeof paidKobo !== 'number' || paidKobo !== expectedKobo) {
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, newBalance: finalBalance, bonusAwarded });
   } catch (error: any) {
-    console.error('Pocketfi verify error:', error.response?.data || error.message);
+    console.error('NeuraPay verify error:', error.response?.data || error.message);
     return NextResponse.json({ success: false, error: 'Verification failed' }, { status: 500 });
   }
 }
