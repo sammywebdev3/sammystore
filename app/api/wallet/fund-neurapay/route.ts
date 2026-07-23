@@ -67,7 +67,11 @@ export async function POST(request: Request) {
     };
 
     if (normalizedChannel === 'palmpay') {
-      payloadBody.identity_type = identityType;
+      // NeuraPay's own docs example uses a fixed "personal" value here for
+      // an individual account owner (as opposed to a business/CAC entity) -
+      // the BVN vs NIN choice is about which kind of number goes into
+      // license_number below, not this field.
+      payloadBody.identity_type = 'personal';
       payloadBody.license_number = String(identityNumber);
     }
 
