@@ -8,7 +8,7 @@ export const metadata = {
 const faqs = [
   {
     q: 'How do I fund my wallet?',
-    a: 'Go to your Dashboard and click "Fund Wallet." You\'ll be redirected to Paystack to complete payment - your wallet is credited automatically within seconds of a successful payment.',
+    a: 'Go to your Dashboard and click "Fund Wallet." You\'ll get a dedicated NeuraPay account number (Paga or PalmPay) - transfer any amount to it and your wallet is credited automatically once the transfer is confirmed.',
   },
   {
     q: 'How long does delivery take?',
@@ -32,7 +32,7 @@ const faqs = [
   },
   {
     q: 'Is my payment information safe?',
-    a: 'Wallet funding is processed directly through Paystack - we never see or store your full card details. See our Privacy Policy for more.',
+    a: 'Wallet funding is processed directly through NeuraPay via your dedicated virtual account - we never see or store your bank login or card details. See our Privacy Policy for more.',
   },
 ];
 
@@ -51,7 +51,7 @@ export default function FaqPage() {
           </li>
           <li className="flex gap-3">
             <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#f97316] text-white text-sm font-bold flex items-center justify-center">2</span>
-            <p className="text-gray-700"><strong>Fund your wallet</strong> from the Dashboard using Paystack.</p>
+            <p className="text-gray-700"><strong>Fund your wallet</strong> from the Dashboard via bank transfer using NeuraPay.</p>
           </li>
           <li className="flex gap-3">
             <span className="flex-shrink-0 w-7 h-7 rounded-full bg-[#f97316] text-white text-sm font-bold flex items-center justify-center">3</span>

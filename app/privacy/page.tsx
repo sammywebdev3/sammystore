@@ -34,9 +34,10 @@ export default function PrivacyPage() {
       <h2>3. Payment Processing</h2>
       <p>
         Wallet funding is processed through our third-party payment processor
-        (Paystack). We do not store your full card details on our servers -
-        these are handled directly by our payment processor in accordance with
-        their own security and privacy standards.
+        (NeuraPay), which provides a dedicated virtual bank account for each
+        user via Paga or PalmPay. We do not store your bank login details on
+        our servers - transfers are handled directly by our payment processor
+        in accordance with their own security and privacy standards.
       </p>
 
       <h2>4. Third-Party Product Suppliers</h2>

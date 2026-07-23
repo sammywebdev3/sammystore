@@ -13,6 +13,10 @@ export interface IUser extends Document {
   referredBy?: mongoose.Types.ObjectId;
   twoFactorSecret?: string;
   twoFactorEnabled: boolean;
+  neurapayAccounts?: {
+    paga?: { accountNumber: string; bankName: string; accountName: string };
+    palmpay?: { accountNumber: string; bankName: string; accountName: string };
+  };
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -31,6 +35,22 @@ const UserSchema: Schema<IUser> = new Schema(
     referredBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     twoFactorSecret: { type: String, default: null },
     twoFactorEnabled: { type: Boolean, default: false },
+    // Each user gets ONE fixed NeuraPay virtual account per provider
+    // channel, generated once and reused forever - NOT regenerated on
+    // every visit to the fund page. Customers can transfer to the same
+    // account number any number of times.
+    neurapayAccounts: {
+      paga: {
+        accountNumber: { type: String },
+        bankName: { type: String },
+        accountName: { type: String },
+      },
+      palmpay: {
+        accountNumber: { type: String },
+        bankName: { type: String },
+        accountName: { type: String },
+      },
+    },
   },
   { timestamps: true }
 );

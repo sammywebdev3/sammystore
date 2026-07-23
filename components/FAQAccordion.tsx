@@ -13,7 +13,7 @@ const FAQS: FAQItem[] = [
   },
   {
     question: 'How do I fund my wallet?',
-    answer: 'Fund instantly via card or bank transfer through Paystack - it credits your wallet automatically within seconds.',
+    answer: 'Fund via bank transfer to your dedicated NeuraPay account (Paga or PalmPay) - it credits your wallet automatically once the transfer is confirmed.',
   },
   {
     question: 'What happens if a purchase fails?',

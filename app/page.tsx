@@ -205,7 +205,7 @@ export default function Home() {
                 2
               </div>
               <h3 className="text-xl font-bold text-gray-800 mb-2">Fund Your Wallet</h3>
-              <p className="text-gray-600 max-w-md">Card or bank transfer via Paystack - instant, secure, no waiting for approval.</p>
+              <p className="text-gray-600 max-w-md">Bank transfer via your own dedicated NeuraPay account (Paga or PalmPay) - instant, secure, no waiting for approval.</p>
             </div>
 
             <div className="flex flex-col items-center">
