@@ -28,6 +28,9 @@ export default function FundPage() {
   const [neurapayReference, setNeurapayReference] = useState('');
   const [neurapayIntendedAmount, setNeurapayIntendedAmount] = useState(0);
   const [neurapayChecking, setNeurapayChecking] = useState(false);
+  const [neurapayChannel, setNeurapayChannel] = useState<'paga' | 'palmpay'>('paga');
+  const [identityType, setIdentityType] = useState<'BVN' | 'NIN' | ''>('');
+  const [identityNumber, setIdentityNumber] = useState('');
   const [manualLoading, setManualLoading] = useState(false);
   const [manualMsg, setManualMsg] = useState('');
   const [manualMsgType, setManualMsgType] = useState('');
@@ -88,6 +91,12 @@ export default function FundPage() {
   };
 
   const handleNeurapayFund = async () => {
+    if (neurapayChannel === 'palmpay' && (!identityType || !/^\d{11}$/.test(identityNumber))) {
+      setNeurapayMsgType('error');
+      setNeurapayMsg('Select BVN or NIN and enter the 11-digit number.');
+      return;
+    }
+
     setNeurapayLoading(true);
     setNeurapayMsg('');
     setNeurapayAccount(null);
@@ -107,7 +116,12 @@ export default function FundPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ amount: parseFloat(amount) })
+        body: JSON.stringify({
+          amount: parseFloat(amount),
+          channel: neurapayChannel,
+          identityType: neurapayChannel === 'palmpay' ? identityType : undefined,
+          identityNumber: neurapayChannel === 'palmpay' ? identityNumber : undefined,
+        })
       });
       const data = await res.json();
 
@@ -316,6 +330,59 @@ export default function FundPage() {
               </div>
             )}
 
+            {NEURAPAY_ENABLED && !neurapayAccount && (
+              <div className="mt-3">
+                <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setNeurapayChannel('paga')}
+                    className={`flex-1 py-2 text-sm font-semibold transition-colors ${
+                      neurapayChannel === 'paga' ? 'bg-[#f97316] text-white' : 'bg-white text-gray-600'
+                    }`}
+                  >
+                    Paga
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNeurapayChannel('palmpay')}
+                    className={`flex-1 py-2 text-sm font-semibold transition-colors ${
+                      neurapayChannel === 'palmpay' ? 'bg-[#f97316] text-white' : 'bg-white text-gray-600'
+                    }`}
+                  >
+                    PalmPay
+                  </button>
+                </div>
+
+                {neurapayChannel === 'palmpay' && (
+                  <div className="p-3 bg-gray-50 rounded-xl mb-3 space-y-2">
+                    <p className="text-xs text-gray-500">
+                      PalmPay requires identity verification. Select BVN or NIN and enter the corresponding 11-digit number.
+                    </p>
+                    <div className="flex gap-2">
+                      <select
+                        value={identityType}
+                        onChange={(e) => setIdentityType(e.target.value as 'BVN' | 'NIN' | '')}
+                        className="px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                      >
+                        <option value="">Select</option>
+                        <option value="BVN">BVN</option>
+                        <option value="NIN">NIN</option>
+                      </select>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={11}
+                        value={identityNumber}
+                        onChange={(e) => setIdentityNumber(e.target.value.replace(/\D/g, ''))}
+                        placeholder="11-digit BVN or NIN number"
+                        className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <button
               onClick={handleNeurapayFund}
               disabled={!NEURAPAY_ENABLED || neurapayLoading || !amount || !!neurapayAccount}
@@ -327,7 +394,9 @@ export default function FundPage() {
                   ? 'Generating Payment Account...'
                   : neurapayAccount
                     ? 'Payment Account Generated'
-                    : 'Pay with NeuraPay'}
+                    : neurapayChannel === 'palmpay'
+                      ? 'Verify & Generate PalmPay Account'
+                      : 'Pay with NeuraPay (Paga)'}
             </button>
 
             {neurapayAccount && (
