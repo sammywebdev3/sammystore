@@ -80,6 +80,21 @@ export async function sendWalletFundedEmail(params: {
   return sendEmail(to, 'Wallet Funded Successfully', html);
 }
 
+export async function sendPasswordResetEmail(params: {
+  to: string;
+  resetUrl: string;
+}) {
+  const { to, resetUrl } = params;
+  const html = wrapTemplate('Reset Your Password', `
+    <p>We received a request to reset your password. Click the button below to choose a new one - this link expires in 1 hour and can only be used once.</p>
+    <p style="text-align: center; margin: 24px 0;">
+      <a href="${resetUrl}" style="background: #f97316; color: #fff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; display: inline-block;">Reset Password</a>
+    </p>
+    <p style="font-size: 13px; color: #6b7280;">If you didn't request this, you can safely ignore this email - your password will not be changed.</p>
+  `);
+  return sendEmail(to, 'Reset Your Password', html);
+}
+
 export async function sendTicketReplyEmail(params: {
   to: string;
   subject: string;

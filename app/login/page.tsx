@@ -56,6 +56,9 @@ export default function LoginPage() {
           <div>
             <label className="block text-gray-700 text-sm font-semibold mb-2">Password</label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="input-field" required />
+            <div className="text-right mt-2">
+              <Link href="/forgot-password" className="text-sm text-[#f97316] hover:underline">Forgot password?</Link>
+            </div>
           </div>
           {needsTwoFactor && (
             <div>

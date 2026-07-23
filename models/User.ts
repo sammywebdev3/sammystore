@@ -17,6 +17,8 @@ export interface IUser extends Document {
     paga?: { accountNumber: string; bankName: string; accountName: string };
     palmpay?: { accountNumber: string; bankName: string; accountName: string };
   };
+  resetPasswordTokenHash?: string;
+  resetPasswordExpires?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -51,6 +53,12 @@ const UserSchema: Schema<IUser> = new Schema(
         accountName: { type: String },
       },
     },
+    // Only the HASH of the reset token is ever stored, same reasoning as
+    // the password itself - if the database were ever exposed, a stored
+    // raw token would let anyone reset any account. The raw token only
+    // ever exists in the emailed link, never persisted.
+    resetPasswordTokenHash: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null },
   },
   { timestamps: true }
 );
