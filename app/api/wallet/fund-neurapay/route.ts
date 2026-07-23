@@ -26,6 +26,9 @@ export async function POST(request: Request) {
     if (!user) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
+    if (user.suspended) {
+      return NextResponse.json({ success: false, error: 'Your account is suspended. Contact support.' }, { status: 403 });
+    }
 
     const { channel, identityType, identityNumber } = await request.json();
     const normalizedChannel: 'paga' | 'palmpay' = channel === 'palmpay' ? 'palmpay' : 'paga';

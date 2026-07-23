@@ -3,6 +3,7 @@ import Transaction from '@/models/Transaction';
 import { sendWalletFundedEmail } from '@/lib/email';
 
 const WELCOME_BONUS_AMOUNT = 500;
+const REFERRAL_BONUS_AMOUNT = 500; // Matches the amount advertised on app/referrals/page.tsx
 
 /**
  * Credits a user's wallet for a successful NeuraPay virtual-account
@@ -111,6 +112,32 @@ export async function creditNeurapayTransaction(params: {
     } catch (bonusError: any) {
       if (bonusError?.code !== 11000) {
         console.error('Welcome bonus error:', bonusError.message);
+      }
+    }
+
+    // Referral bonus: app/referrals/page.tsx promises the REFERRER ₦500
+    // once the person they referred makes their first deposit. This is
+    // keyed to the REFERRED user's id (not the referrer's), so it can
+    // only ever fire once per referred signup no matter how many times
+    // they deposit afterwards - the unique index on Transaction.reference
+    // is what enforces that, same idempotency pattern as everything else
+    // in this file.
+    if (user.referredBy) {
+      try {
+        await Transaction.create({
+          userId: user.referredBy,
+          type: 'referral_bonus',
+          description: `Referral bonus - ${user.name} made their first deposit`,
+          amount: REFERRAL_BONUS_AMOUNT,
+          status: 'success',
+          reference: `referral-bonus-${user._id}`,
+        });
+
+        await User.findByIdAndUpdate(user.referredBy, { $inc: { walletBalance: REFERRAL_BONUS_AMOUNT } });
+      } catch (referralError: any) {
+        if (referralError?.code !== 11000) {
+          console.error('Referral bonus error:', referralError.message);
+        }
       }
     }
   }
