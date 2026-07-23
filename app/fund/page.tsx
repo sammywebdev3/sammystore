@@ -25,8 +25,6 @@ export default function FundPage() {
   const [neurapayMsg, setNeurapayMsg] = useState('');
   const [neurapayMsgType, setNeurapayMsgType] = useState('');
   const [neurapayAccount, setNeurapayAccount] = useState<{ accountNumber: string; bankName: string; accountName: string } | null>(null);
-  const [neurapayReference, setNeurapayReference] = useState('');
-  const [neurapayIntendedAmount, setNeurapayIntendedAmount] = useState(0);
   const [neurapayChecking, setNeurapayChecking] = useState(false);
   const [neurapayChannel, setNeurapayChannel] = useState<'paga' | 'palmpay'>('paga');
   const [identityType, setIdentityType] = useState<'BVN' | 'NIN' | ''>('');
@@ -90,8 +88,9 @@ export default function FundPage() {
     setLoading(false);
   };
 
-  const handleNeurapayFund = async () => {
-    if (neurapayChannel === 'palmpay' && (!identityType || !/^\d{11}$/.test(identityNumber))) {
+  const handleNeurapayFund = async (channelOverride?: 'paga' | 'palmpay') => {
+    const channel = channelOverride || neurapayChannel;
+    if (channel === 'palmpay' && (!identityType || !/^\d{11}$/.test(identityNumber))) {
       setNeurapayMsgType('error');
       setNeurapayMsg('Select BVN or NIN and enter the 11-digit number.');
       return;
@@ -99,7 +98,6 @@ export default function FundPage() {
 
     setNeurapayLoading(true);
     setNeurapayMsg('');
-    setNeurapayAccount(null);
 
     const token = localStorage.getItem('token');
     if (!token) {
@@ -117,18 +115,15 @@ export default function FundPage() {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          amount: parseFloat(amount),
-          channel: neurapayChannel,
-          identityType: neurapayChannel === 'palmpay' ? identityType : undefined,
-          identityNumber: neurapayChannel === 'palmpay' ? identityNumber : undefined,
+          channel,
+          identityType: channel === 'palmpay' ? identityType : undefined,
+          identityNumber: channel === 'palmpay' ? identityNumber : undefined,
         })
       });
       const data = await res.json();
 
       if (data.success && data.account) {
         setNeurapayAccount(data.account);
-        setNeurapayReference(data.reference);
-        setNeurapayIntendedAmount(data.intendedAmount);
       } else {
         setNeurapayMsgType('error');
         setNeurapayMsg(data.error || 'Failed to generate a payment account');
@@ -140,36 +135,36 @@ export default function FundPage() {
     setNeurapayLoading(false);
   };
 
-  const checkNeurapayStatus = async () => {
-    if (!neurapayReference) return;
+  // This account is PERMANENT once generated (same number every visit),
+  // so check for an existing one on page load instead of making the user
+  // press a button every time - fund-neurapay just returns the saved one
+  // if it already exists, with no NeuraPay API call.
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch('/api/wallet/fund-neurapay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ channel: 'paga' }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.account) setNeurapayAccount(data.account);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refreshBalance = async () => {
     setNeurapayChecking(true);
-    setNeurapayMsg('');
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch('/api/wallet/check-neurapay', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ reference: neurapayReference })
-      });
+      const res = await fetch('/api/wallet/balance', { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-      if (data.success && data.status === 'success') {
+      if (typeof data.balance === 'number') {
+        setBalance(data.balance);
         setNeurapayMsgType('success');
-        setNeurapayMsg('Payment received! Your wallet has been credited.');
-        setNeurapayAccount(null);
-        setNeurapayReference('');
-        fetch('/api/wallet/balance', { headers: { 'Authorization': `Bearer ${token}` } })
-          .then(res => res.json())
-          .then(d => { if (typeof d.balance === 'number') setBalance(d.balance); })
-          .catch(console.error);
-      } else if (data.success) {
-        setNeurapayMsgType('error');
-        setNeurapayMsg('No payment received yet. If you already transferred, it can take a minute to confirm — this checks automatically every few seconds.');
-      } else {
-        setNeurapayMsgType('error');
-        setNeurapayMsg(data.error || 'Could not check payment status');
+        setNeurapayMsg('Balance refreshed.');
       }
     } catch (error: any) {
       setNeurapayMsgType('error');
@@ -177,18 +172,6 @@ export default function FundPage() {
     }
     setNeurapayChecking(false);
   };
-
-  // Auto-poll every 10s while a virtual account is showing, so most users
-  // never have to tap "Check status" manually - it just updates once the
-  // webhook (or this poll itself) confirms the transfer.
-  useEffect(() => {
-    if (!neurapayReference) return;
-    const interval = setInterval(() => {
-      checkNeurapayStatus();
-    }, 10000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [neurapayReference]);
 
   const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -330,12 +313,16 @@ export default function FundPage() {
               </div>
             )}
 
-            {NEURAPAY_ENABLED && !neurapayAccount && (
+            {NEURAPAY_ENABLED && (
               <div className="mt-3">
                 <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-3">
                   <button
                     type="button"
-                    onClick={() => setNeurapayChannel('paga')}
+                    onClick={() => {
+                      setNeurapayChannel('paga');
+                      setNeurapayAccount(null);
+                      handleNeurapayFund('paga');
+                    }}
                     className={`flex-1 py-2 text-sm font-semibold transition-colors ${
                       neurapayChannel === 'paga' ? 'bg-[#f97316] text-white' : 'bg-white text-gray-600'
                     }`}
@@ -344,7 +331,10 @@ export default function FundPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setNeurapayChannel('palmpay')}
+                    onClick={() => {
+                      setNeurapayChannel('palmpay');
+                      setNeurapayAccount(null);
+                    }}
                     className={`flex-1 py-2 text-sm font-semibold transition-colors ${
                       neurapayChannel === 'palmpay' ? 'bg-[#f97316] text-white' : 'bg-white text-gray-600'
                     }`}
@@ -353,10 +343,10 @@ export default function FundPage() {
                   </button>
                 </div>
 
-                {neurapayChannel === 'palmpay' && (
+                {neurapayChannel === 'palmpay' && !neurapayAccount && (
                   <div className="p-3 bg-gray-50 rounded-xl mb-3 space-y-2">
                     <p className="text-xs text-gray-500">
-                      PalmPay requires identity verification. Select BVN or NIN and enter the corresponding 11-digit number.
+                      PalmPay requires identity verification. Select BVN or NIN and enter the corresponding 11-digit number - this is only needed once.
                     </p>
                     <div className="flex gap-2">
                       <select
@@ -378,31 +368,26 @@ export default function FundPage() {
                         className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm"
                       />
                     </div>
+                    <button
+                      onClick={() => handleNeurapayFund('palmpay')}
+                      disabled={neurapayLoading}
+                      className="btn-primary w-full disabled:opacity-50 mt-1"
+                    >
+                      {neurapayLoading ? 'Verifying...' : 'Verify & Generate PalmPay Account'}
+                    </button>
                   </div>
                 )}
               </div>
             )}
 
-            <button
-              onClick={handleNeurapayFund}
-              disabled={!NEURAPAY_ENABLED || neurapayLoading || !amount || !!neurapayAccount}
-              className="btn-primary w-full disabled:opacity-50 mt-3"
-            >
-              {!NEURAPAY_ENABLED
-                ? 'NeuraPay Temporarily Unavailable'
-                : neurapayLoading
-                  ? 'Generating Payment Account...'
-                  : neurapayAccount
-                    ? 'Payment Account Generated'
-                    : neurapayChannel === 'palmpay'
-                      ? 'Verify & Generate PalmPay Account'
-                      : 'Pay with NeuraPay (Paga)'}
-            </button>
+            {neurapayLoading && !neurapayAccount && neurapayChannel === 'paga' && (
+              <p className="text-sm text-gray-500 mt-2">Loading your NeuraPay account...</p>
+            )}
 
             {neurapayAccount && (
               <div className="mt-4 p-4 bg-gray-50 rounded-xl space-y-2">
                 <p className="text-sm text-gray-600 mb-2">
-                  Transfer <span className="font-bold text-gray-800">₦{neurapayIntendedAmount.toLocaleString()}</span> to the account below. Your wallet is credited automatically once received.
+                  This is your permanent {neurapayChannel === 'palmpay' ? 'PalmPay' : 'Paga'} account - transfer any amount to it any time, your wallet is credited automatically once received.
                 </p>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-500">Bank</span>
@@ -417,13 +402,12 @@ export default function FundPage() {
                   <span className="font-semibold text-gray-800">{neurapayAccount.accountName}</span>
                 </div>
                 <button
-                  onClick={checkNeurapayStatus}
+                  onClick={refreshBalance}
                   disabled={neurapayChecking}
                   className="btn-primary w-full disabled:opacity-50 mt-2"
                 >
-                  {neurapayChecking ? 'Checking...' : "I've Made the Transfer - Check Status"}
+                  {neurapayChecking ? 'Refreshing...' : 'Refresh Balance'}
                 </button>
-                <p className="text-xs text-gray-400 text-center">We also check automatically every few seconds.</p>
               </div>
             )}
 

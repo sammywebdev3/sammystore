@@ -1,24 +1,18 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
-import crypto from 'crypto';
 import dbConnect from '@/lib/mongodb';
 import User from '@/models/User';
-import Transaction from '@/models/Transaction';
 import { getUserId } from '@/lib/auth';
 
 const NEURAPAY_BASE_URL = 'https://neurapay.com.ng/api/v1';
 
-// NeuraPay virtual accounts don't take an amount at creation time - the
-// account is generated for a customer/reference, and the customer can
-// transfer whatever amount they want to it. We still ask the user for an
-// intended amount here purely so we can show it back to them in the UI
-// ("transfer ₦X to this account") - the actual wallet credit later uses
-// whatever NeuraPay confirms was really received, not this number.
-//
-// Two provider channels are supported, per NeuraPay's docs:
-//   - Paga:    no identity document required.
-//   - PalmPay: requires the account owner's BVN or NIN (11-digit number),
-//              sent as identity_type + license_number.
+// NeuraPay virtual accounts are PERSISTENT per customer, not per-payment -
+// the same account number stays valid for repeated transfers. So this
+// route generates an account ONCE per user per channel, saves it on the
+// User document, and every subsequent call just returns the saved one
+// instead of calling NeuraPay again. Crediting is handled entirely by the
+// webhook/manual-check matching on this fixed account number - see
+// lib/neurapayCredit.ts.
 export async function POST(request: Request) {
   try {
     await dbConnect();
@@ -33,14 +27,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    const { amount, channel, identityType, identityNumber } = await request.json();
+    const { channel, identityType, identityNumber } = await request.json();
+    const normalizedChannel: 'paga' | 'palmpay' = channel === 'palmpay' ? 'palmpay' : 'paga';
 
-    const intendedAmount = parseFloat(String(amount));
-    if (isNaN(intendedAmount) || intendedAmount <= 0) {
-      return NextResponse.json({ success: false, error: 'Invalid amount' }, { status: 400 });
+    // Already have one for this channel - just hand it back, no API call.
+    const existing = user.neurapayAccounts?.[normalizedChannel];
+    if (existing?.accountNumber) {
+      return NextResponse.json({ success: true, account: existing, reused: true });
     }
-
-    const normalizedChannel = channel === 'palmpay' ? 'palmpay' : 'paga';
 
     if (normalizedChannel === 'palmpay') {
       if (identityType !== 'BVN' && identityType !== 'NIN') {
@@ -57,20 +51,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'NeuraPay is not configured' }, { status: 500 });
     }
 
-    const reference = `SAMMY-NP-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`;
+    // Reference here just identifies THIS creation request to NeuraPay -
+    // it's not used later for matching payments, since the account itself
+    // (not a reference) is what's persistent and what the webhook matches.
+    const creationReference = `SAMMY-NP-ACC-${user._id}-${normalizedChannel}`;
 
     const payloadBody: Record<string, any> = {
       customer_name: user.name,
       customer_email: user.email,
       provider_channel: normalizedChannel === 'palmpay' ? 'Palmpay' : 'Paga',
-      reference,
+      reference: creationReference,
     };
 
     if (normalizedChannel === 'palmpay') {
-      // NeuraPay's own docs example uses a fixed "personal" value here for
-      // an individual account owner (as opposed to a business/CAC entity) -
-      // the BVN vs NIN choice is about which kind of number goes into
-      // license_number below, not this field.
+      // NeuraPay's documented example uses the fixed value "personal" for
+      // an individual account owner - the BVN/NIN choice is about which
+      // kind of number goes into license_number, not this field.
       payloadBody.identity_type = 'personal';
       payloadBody.license_number = String(identityNumber);
     }
@@ -83,8 +79,6 @@ export async function POST(request: Request) {
       },
     });
 
-    // Log the full raw response every time (not just on failure) so we can
-    // confirm the real field names/behavior on the next test call.
     console.log('NeuraPay virtual-account creation response:', JSON.stringify(response.data));
     const payload = response.data?.data || response.data;
     const accountNumber = payload?.account_number || payload?.virtual_account || payload?.accountNumber;
@@ -99,30 +93,17 @@ export async function POST(request: Request) {
       );
     }
 
-    // Pending transaction, keyed by reference. amount is a placeholder
-    // (the intended amount) and gets overwritten with the real received
-    // amount once payment is confirmed - see lib/neurapayCredit.ts.
-    await Transaction.create({
-      userId: user._id,
-      type: 'wallet_fund',
-      description: `Wallet funding via NeuraPay/${bankName} (awaiting transfer of ₦${intendedAmount})`,
-      amount: intendedAmount,
-      status: 'pending',
-      activationId: reference,
-      metadata: { intendedAmount, accountNumber, bankName, accountName, channel: normalizedChannel },
+    const account = { accountNumber, bankName, accountName };
+
+    // Save permanently on the user - this is what makes it persistent.
+    // Using dot-notation update (not a full re-save) so a concurrent
+    // request for the OTHER channel can't clobber it.
+    await User.findByIdAndUpdate(user._id, {
+      $set: { [`neurapayAccounts.${normalizedChannel}`]: account },
     });
 
-    return NextResponse.json({
-      success: true,
-      reference,
-      intendedAmount,
-      account: { accountNumber, bankName, accountName },
-    });
+    return NextResponse.json({ success: true, account, reused: false });
   } catch (error: any) {
-    // Surface NeuraPay's own business-logic error message when available
-    // (e.g. "KYC verification is required", "The selected banking channel
-    // is undergoing maintenance") instead of a generic failure - these are
-    // actionable for the user/merchant, per NeuraPay's documented error set.
     const providerMessage = error.response?.data?.message;
     console.error('NeuraPay virtual account error:', error.response?.data || error.message);
     return NextResponse.json(
