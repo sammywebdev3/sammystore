@@ -4,10 +4,12 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Logo from '@/components/Logo';
 import NotificationBell from '@/components/NotificationBell';
+import { useSidebar } from '@/lib/sidebarContext';
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { setOpen } = useSidebar();
   const [balance, setBalance] = useState<number | null>(null);
   const [cartCount, setCartCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,9 +46,18 @@ export default function Navbar() {
 
   return (
     <nav className="w-full bg-white border-b border-gray-200 p-4 flex justify-between items-center sticky top-0 z-50 shadow-sm">
-      <Link href="/dashboard" className="flex items-center gap-2 shrink-0" aria-label="SammyStore home">
-        <Logo />
-      </Link>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Open menu"
+          className="md:hidden p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          <span className="text-xl leading-none">☰</span>
+        </button>
+        <Link href="/dashboard" className="flex items-center gap-2" aria-label="SammyStore home">
+          <Logo />
+        </Link>
+      </div>
 
       <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-sm mx-4">
         <input
