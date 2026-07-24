@@ -37,9 +37,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   const { id } = await params;
-  const { message } = await request.json();
+  const { message, attachmentUrl } = await request.json();
   if (!message?.trim()) {
     return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+  }
+
+  // Same validation as ticket creation (app/api/support/tickets/route.ts) -
+  // client-side checks can be bypassed, so type/size are re-checked here.
+  let cleanAttachment: string | undefined;
+  if (attachmentUrl) {
+    const isImageDataUri = /^data:image\/(png|jpe?g|webp|gif);base64,/.test(attachmentUrl);
+    const approxBytes = (attachmentUrl.length * 3) / 4;
+    if (!isImageDataUri) {
+      return NextResponse.json({ error: 'Attachment must be an image' }, { status: 400 });
+    }
+    if (approxBytes > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Attachment must be under 5MB' }, { status: 400 });
+    }
+    cleanAttachment = attachmentUrl;
   }
 
   const ticket = await Ticket.findOne({ _id: id, userId });
@@ -47,7 +62,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
   }
 
-  ticket.messages.push({ sender: 'user', message: message.trim(), createdAt: new Date() });
+  ticket.messages.push({
+    sender: 'user',
+    message: message.trim(),
+    attachmentUrl: cleanAttachment,
+    createdAt: new Date(),
+  });
   ticket.status = 'pending';
   await ticket.save();
 

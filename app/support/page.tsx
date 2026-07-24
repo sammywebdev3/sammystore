@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface TicketMessage {
@@ -39,12 +39,43 @@ export default function SupportPage() {
 
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [replyAttachment, setReplyAttachment] = useState<string | null>(null);
   const [replying, setReplying] = useState(false);
 
   const [showNewForm, setShowNewForm] = useState(false);
   const [newSubject, setNewSubject] = useState('');
   const [newMessage, setNewMessage] = useState('');
+  const [newAttachment, setNewAttachment] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+
+  const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5MB
+
+  // Shared by both the new-ticket form and the reply form - reads an
+  // image file as a base64 data URI (that's what attachmentUrl stores,
+  // per models/Ticket.ts) with a size and type cap enforced client-side
+  // before it's ever sent.
+  const handleImageSelect = (
+    e: ChangeEvent<HTMLInputElement>,
+    setAttachment: (value: string | null) => void
+  ) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow selecting the same file again later
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file.');
+      return;
+    }
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      setError('Image is too large - please use one under 5MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => setAttachment(reader.result as string);
+    reader.onerror = () => setError('Failed to read the image. Please try again.');
+    reader.readAsDataURL(file);
+  };
 
   const authedFetch = (url: string, opts: RequestInit = {}) => {
     const token = localStorage.getItem('token');
@@ -105,12 +136,17 @@ export default function SupportPage() {
       setError('');
       const res = await authedFetch('/api/support/tickets', {
         method: 'POST',
-        body: JSON.stringify({ subject: newSubject.trim(), message: newMessage.trim() }),
+        body: JSON.stringify({
+          subject: newSubject.trim(),
+          message: newMessage.trim(),
+          attachmentUrl: newAttachment || undefined,
+        }),
       });
       const data = await res.json();
       if (data.success) {
         setNewSubject('');
         setNewMessage('');
+        setNewAttachment(null);
         setShowNewForm(false);
         await loadTickets();
         setSelectedTicket(data.ticket);
@@ -130,12 +166,13 @@ export default function SupportPage() {
       setReplying(true);
       const res = await authedFetch(`/api/support/tickets/${selectedTicket._id}`, {
         method: 'POST',
-        body: JSON.stringify({ message: replyText.trim() }),
+        body: JSON.stringify({ message: replyText.trim(), attachmentUrl: replyAttachment || undefined }),
       });
       const data = await res.json();
       if (data.success) {
         setSelectedTicket(data.ticket);
         setReplyText('');
+        setReplyAttachment(null);
         loadTickets();
       } else {
         setError(data.error || 'Failed to send reply');
@@ -199,13 +236,36 @@ export default function SupportPage() {
                 rows={3}
                 className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f97316] outline-none transition"
               />
-              <button
-                onClick={handleReply}
-                disabled={replying || !replyText.trim()}
-                className="bg-[#f97316] hover:bg-[#ea580c] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                {replying ? 'Sending...' : 'Send Reply'}
-              </button>
+              {replyAttachment && (
+                <div className="relative inline-block">
+                  <img src={replyAttachment} alt="Attachment preview" className="h-20 rounded-lg border border-gray-200" />
+                  <button
+                    onClick={() => setReplyAttachment(null)}
+                    aria-label="Remove image"
+                    className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-gray-800 text-white text-xs flex items-center justify-center"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-gray-500 hover:text-[#f97316] cursor-pointer inline-flex items-center gap-1 border border-gray-200 rounded-lg px-3 py-2">
+                  📎 {replyAttachment ? 'Change image' : 'Attach screenshot'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleImageSelect(e, setReplyAttachment)}
+                  />
+                </label>
+                <button
+                  onClick={handleReply}
+                  disabled={replying || !replyText.trim()}
+                  className="bg-[#f97316] hover:bg-[#ea580c] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                >
+                  {replying ? 'Sending...' : 'Send Reply'}
+                </button>
+              </div>
             </div>
           )}
           {selectedTicket.status === 'closed' && (
@@ -253,13 +313,36 @@ export default function SupportPage() {
             rows={4}
             className="w-full p-3 bg-gray-50 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#f97316] outline-none transition"
           />
-          <button
-            onClick={handleCreateTicket}
-            disabled={creating}
-            className="bg-[#f97316] hover:bg-[#ea580c] disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
-          >
-            {creating ? 'Submitting...' : 'Submit Ticket'}
-          </button>
+          {newAttachment && (
+            <div className="relative inline-block">
+              <img src={newAttachment} alt="Attachment preview" className="h-20 rounded-lg border border-gray-200" />
+              <button
+                onClick={() => setNewAttachment(null)}
+                aria-label="Remove image"
+                className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-gray-800 text-white text-xs flex items-center justify-center"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-500 hover:text-[#f97316] cursor-pointer inline-flex items-center gap-1 border border-gray-200 rounded-lg px-3 py-2">
+              📎 {newAttachment ? 'Change image' : 'Attach screenshot'}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleImageSelect(e, setNewAttachment)}
+              />
+            </label>
+            <button
+              onClick={handleCreateTicket}
+              disabled={creating}
+              className="bg-[#f97316] hover:bg-[#ea580c] disabled:opacity-50 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+            >
+              {creating ? 'Submitting...' : 'Submit Ticket'}
+            </button>
+          </div>
         </div>
       )}
 

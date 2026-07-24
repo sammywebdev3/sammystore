@@ -80,6 +80,7 @@ export async function getSupportBotReply(
   if (!apiKey) {
     // No key configured - fail safe by escalating immediately rather than
     // pretending to be a working bot.
+    console.error('[support-bot] ANTHROPIC_API_KEY is not set - every message will escalate to a ticket until this is fixed');
     return {
       reply: "I'll connect you with our support team.",
       escalate: true,
@@ -103,7 +104,7 @@ export async function getSupportBotReply(
 
   if (!response.ok) {
     const errText = await response.text().catch(() => '');
-    console.error('Support bot API error:', response.status, errText);
+    console.error(`[support-bot] Anthropic API error (status ${response.status}) - escalating:`, errText);
     return {
       reply: "I'm having trouble right now - let me connect you with our support team instead.",
       escalate: true,
