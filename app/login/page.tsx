@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Logo from '@/components/Logo';
@@ -12,6 +12,14 @@ export default function LoginPage() {
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+
+  // Reads the query string directly (rather than useSearchParams) so this
+  // page doesn't need a Suspense boundary just for this one message.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('expired') === '1') {
+      setMsg('Your session expired - please log in again.');
+    }
+  }, []);
 
   const handleLogin = async (e: any) => {
     e.preventDefault();
