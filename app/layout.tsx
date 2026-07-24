@@ -4,6 +4,7 @@ import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import SupportWidget from "@/components/SupportWidget";
 import SocialProofPopup from "@/components/SocialProofPopup";
+import SessionGuard from "@/components/SessionGuard";
 import Footer from "@/components/Footer";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
 import { SidebarProvider } from "@/lib/sidebarContext";
@@ -35,6 +36,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <SidebarProvider>
+          <SessionGuard />
           <AnnouncementBanner />
           <div className="pb-16 md:pb-0 flex flex-col min-h-full">
             <div className="flex-1">{children}</div>

@@ -1,51 +1,40 @@
-Public Developer API - integrate with SammyStore programmatically
-=====================================================================
-New:     app/developers/page.tsx     (public API docs page)
-Updated: lib/auth.ts                 (accepts API keys, not just session JWTs)
-Updated: app/settings/page.tsx       (links to the new docs page)
-Updated: 27 route files              (added `await` - see below, this is mechanical/safe)
+UX sweep: expired sessions, 404 page, crash page
+====================================================
 
-THE CORE CHANGE:
-Every user already had a personal API key (viewable/regeneratable on
-Settings) - it just did nothing, since every protected endpoint only
-accepted a browser session JWT. lib/auth.ts's getUserId() now accepts
-EITHER credential:
-  - A session JWT (unchanged, still how the website itself works)
-  - An API key ("sammy_..." prefix) - looked up directly against the
-    database
+FINDING #1 - Expired/invalid sessions were silently broken on 7 of 9
+protected pages (dashboard, orders, history, fund, referrals, smm,
+numbers all lacked any 401 handling - only settings and cart had it).
+A user whose login token expired would just see broken/empty pages with
+no explanation, instead of being sent back to log in.
 
-This means every existing endpoint that already called getUserId() -
-buy a number, place an SMM order, check balance, list orders, open a
-support ticket, etc. - is now usable by an external developer's own
-code with their API key, with ZERO duplicated business logic. No new
-"v1 API" routes needed; the real app IS the API.
+Fixed globally instead of patching each page separately:
+New:     components/SessionGuard.tsx  (patches window.fetch ONCE, checks
+                                        every authenticated request for a
+                                        401, redirects to /login?expired=1)
+Updated: app/layout.tsx               (renders SessionGuard globally)
+Updated: app/login/page.tsx           (shows "Your session expired -
+                                        please log in again" when
+                                        redirected here)
 
-WHY 27 FILES CHANGED:
-Validating an API key requires a database lookup, so getUserId() had to
-become async. Every route that calls it needed `await` added before the
-call - this is purely mechanical (all 27 already run inside `async
-function` route handlers, so this is 100% safe, not a behavior change
-for existing JWT-based requests).
+This only triggers for requests that were already sending a Bearer
+token - it deliberately does NOT trigger on the login/register forms'
+own fetch calls, so a wrong password still just shows a normal error,
+not a forced redirect.
 
-SAFETY NOTES:
-- Admin routes (app/api/admin/*) use a completely separate check
-  (verifyAdmin in lib/adminAuth.ts) that never calls getUserId - API
-  keys can NEVER be used to reach admin functionality, even accidentally.
-- API-key requests share a rate limit of 60/minute across ALL endpoints
-  combined (one buggy integration script can't hammer everything).
-- Suspended-user checks on individual routes still apply exactly as
-  before - a suspended account's API key is just as blocked as their
-  browser session would be.
+FINDING #2 - No custom 404 or crash page.
+Any mistyped URL, or any unexpected bug that crashes rendering, showed
+Next.js's bare default page with no branding and no way back to the site.
+New: app/not-found.tsx    (styled 404 page with a link back home)
+New: app/global-error.tsx (styled crash page with Try Again / Back Home)
 
 HOW TO USE:
 1. Upload to repo root in Codespace.
-2. unzip -o public-api.zip -d .
-   rm public-api.zip
-3. npm run dev - test end to end:
-   a. Log in on the site, go to Settings, copy your API key.
-   b. curl http://localhost:3000/api/wallet/balance -H "Authorization: Bearer sammy_..."
-      -> should return your real balance, same as the site shows.
-   c. Visit /developers to see the full docs page.
+2. unzip -o ux-session-error-pages.zip -d .
+   rm ux-session-error-pages.zip
+3. npm run dev - test: visit a random nonsense URL (should show the new
+   404 page, not Next's default). To test session expiry, manually edit
+   localStorage's "token" value to garbage in devtools, then navigate to
+   /dashboard - should redirect to /login with the expired message.
 4. git add -A
-   git commit -m "Add public developer API (API key auth on existing endpoints)"
+   git commit -m "Add global session-expiry handling, custom 404 and error pages"
    git push
