@@ -47,11 +47,17 @@ export async function POST(request: Request) {
       // generate enough attempts to matter... except an attacker probing
       // could tell the difference). Simplest safe answer: same message
       // either way, just silently skip sending.
+      //
+      // This log line is for YOU (checking Vercel/Codespace logs while
+      // debugging) - it never reaches the client response, so it doesn't
+      // weaken the anti-enumeration behavior above.
+      console.log(`[forgot-password] rate-limited, no email sent for ${normalizedEmail}`);
       return genericResponse;
     }
 
     const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
+      console.log(`[forgot-password] no account found for ${normalizedEmail}, no email sent`);
       return genericResponse;
     }
 
@@ -68,9 +74,15 @@ export async function POST(request: Request) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const resetUrl = `${siteUrl}/reset-password?token=${rawToken}&email=${encodeURIComponent(normalizedEmail)}`;
 
-    sendPasswordResetEmail({ to: user.email, resetUrl }).catch((err) =>
-      console.error('Password reset email failed:', err)
-    );
+    sendPasswordResetEmail({ to: user.email, resetUrl })
+      .then((result) => {
+        if (result?.success === false) {
+          console.error(`[forgot-password] email send FAILED for ${normalizedEmail}:`, result.error);
+        } else {
+          console.log(`[forgot-password] email sent successfully to ${normalizedEmail}`);
+        }
+      })
+      .catch((err) => console.error(`[forgot-password] unexpected error sending to ${normalizedEmail}:`, err));
 
     return genericResponse;
   } catch (error: any) {
